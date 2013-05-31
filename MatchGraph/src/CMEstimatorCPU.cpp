@@ -35,12 +35,11 @@ Indices* CMEstimatorCPU::getInitializationIndices(MatrixHandler* T, int initNr)
 			//get random number
 			rIdx = rand() % (dim*dim);
 
-
 			//compute matrix indices with given continuous index sequence
 			x = rIdx/dim;
 			y = rIdx%dim;
 			c++;
-		} while ( ((rIdx > 1+(rIdx/dim)+(rIdx/dim)*dim) || (T->getVal(x,y) != 0))
+		} while ( ((rIdx < 1+(rIdx/dim)+(rIdx/dim)*dim) || (T->getVal(x,y) != 0))
 				&& (c <= MAX_ITERATIONS) );
 		/* :TRICKY:
 		 * As long as the random number is not within the upper diagonal matrix w/o diagonal elements
