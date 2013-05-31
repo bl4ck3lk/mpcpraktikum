@@ -20,8 +20,7 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-
-	char* dir = "../resource/notre_dame_40"; //todo use input-parameter
+	const char* dir = "../resource/notre_dame_40"; //todo use input-parameter
 
 	////////////////////////
 	//computation handlers//
@@ -30,10 +29,8 @@ int main(int argc, char** argv)
 	CMEstimator* CME = new CMEstimatorCPU();
     	//CMEstimator* CME = new CMEstimatorGPUSorted();
 	ImageComparator* comparator = new CPUComparator();
-	ImageHandler* iHandler = new ImageHandler(dir); //works only with linux
+	ImageHandler* iHandler = new ImageHandler(dir);
 	printf("Directory %s with %i files initialized.\n", dir, iHandler->getTotalNr());
-
-	iHandler->printMap(); //everything seems fine //todo map bug
 
 	////////////
 	//Settings//
@@ -48,8 +45,6 @@ int main(int argc, char** argv)
 	float lambda 	= 1.0;
 	int iterations 	= 5;
 	int kBest 		= sizeOfInitIndicesList;
-
-	iHandler->printMap(); //first and second element lost? //todo map bug
 
 	/////////////////////////////////////////////////////////
 	//Match Graph algorithm (predict & verify step-by-step)//
@@ -101,9 +96,6 @@ int main(int argc, char** argv)
 
 		cout << "T_" << i << ":\n" << endl;
 		T->print();
-
 	}
-
-	iHandler->printMap(); //any value is lost. Keys still remaining. //todo map bug
 	return 0;
 }

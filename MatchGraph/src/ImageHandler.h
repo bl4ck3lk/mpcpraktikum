@@ -9,20 +9,21 @@
 #define IMAGEHANDLER_H_
 
 #include <map>
+#include <string>
 
 class ImageHandler
 {
 	public:
-		ImageHandler(char* imgDir); //constructor
+		ImageHandler(const char* imgDir); //constructor
 		//~ImageHandler(); //destructor
-		char* getImage(int img); //get specific image
+		const char* getImage(int img); //get specific image
 		int getTotalNr(); //get total nr of images
 		int getMapSize();
 		void printMap();
 		void sortImages();
 
 	private:
-		std::map<int,char*> images;
+		std::map<int,std::string> images;
 		int nrImages; //total number of images
 };
 

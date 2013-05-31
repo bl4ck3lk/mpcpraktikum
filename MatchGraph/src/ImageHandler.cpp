@@ -13,12 +13,12 @@
 #include <dirent.h>
 
 //constructor
-ImageHandler::ImageHandler(char* imgDir)
+ImageHandler::ImageHandler(const char* imgDir)
 	: nrImages(0)
 {
 	//construct map based on image directory and count images
     DIR           *dirHandle; 
-    struct dirent *dirEntry; 
+    struct dirent *dirEntry;
     
     //open directory 
     dirHandle = opendir(imgDir); 
@@ -28,18 +28,16 @@ ImageHandler::ImageHandler(char* imgDir)
         //get content 
         while ((dirEntry = readdir(dirHandle)) != NULL)
         { 
-			char* entry = (char*)dirEntry->d_name;
+        	char* entry = (char*)dirEntry->d_name;
 			if (strcmp(entry,".") != 0 && strcmp(entry,"..") != 0)
 			{
 				//printf("%s\n",dirEntry->d_name);
-				images[nrImages++] = (char*)dirEntry->d_name;
+				images.insert(std::pair<int,std::string>(nrImages++, dirEntry->d_name));
 			}
         }
         //done 
         closedir(dirHandle); 
     } 
-
-	//printf("%i\n",ImageHandler::nrImages);
 }
 
 /*
@@ -63,24 +61,26 @@ int ImageHandler::getMapSize()
 
 void ImageHandler::printMap()
 {
-	for(std::map<int,char*>::iterator it = images.begin(); it != images.end(); it++)
+	for(std::map<int,std::string>::iterator it = images.begin(); it != images.end(); it++)
 	{
-		printf("[%i, %s]\n",it->first, it->second);
+		printf("[%i, %s]\n",it->first, it->second.c_str());
 	}
 }
 
 //Get image path base on image nr
-char* ImageHandler::getImage(int imgNr)
+
+const char* ImageHandler::getImage(int imgNr)
 {
 	if (imgNr < 0 || imgNr > nrImages-1) //images: 0,....,nrImages-1
 	{
 		printf("ImageHandler Error: Image nr %i not within [0,%i].\nReturning image 0.",imgNr,nrImages-1);
-		return images.find(0)->second;
+		return images.find(0)->second.c_str();
 	} else {
-		return images.find(imgNr)->second;
+		return images.find(imgNr)->second.c_str();
 	}
 
 }
+
 
 // tries to sort images based on filename under assumption filename begins with number
 // ATTENTION: this function is currently just a bad hack for testing purpose!!!
@@ -90,8 +90,9 @@ char* ImageHandler::getImage(int imgNr)
 // Die Reihenfolge der Bilder wird sich nicht ändern, während wir das Programm ausführen.
 // D.h. wenn wir sie einmal (in irgendeiner Reihenfolge) eingelesen haben, bleibt das 1. Bild
 // auch immer das 1. Bild.
+/*
 void ImageHandler::sortImages(){
-	std::map<int,char*> sorted;
+	std::map<int,char> sorted;
 	char* sortArr[nrImages];
 	for(int i = 0; i < nrImages; i++)
 	{
@@ -106,3 +107,4 @@ void ImageHandler::sortImages(){
 		//std::cout << sortArr[i] << std::endl;
 	}
 }
+*/

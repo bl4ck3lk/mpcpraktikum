@@ -16,7 +16,6 @@ CPUComparator::CPUComparator()
 
 void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int kBest, Indices* kBestIndices)
 {
-	//printf("Executing Comparison on CPU.\n");
 	for(int i = 0; i < kBest; i++)
 	{
 		//if(doComparisonOfImages(image[index1[i]] , image[index2[i]]) TELLS Similar)
@@ -28,9 +27,7 @@ void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int k
 
 		if (x != -1)
 		{
-
-			//printf("Comparator: Comparing image %i: %s and image %i: %s \n",x,y,iHandler->getImage(x),iHandler->getImage(y));
-			//map has lost elements, so this is not working yet
+			printf("[CPUComparator]: Comparing image %i: %s with image %i: %s\n", x, iHandler->getImage(x), y, iHandler->getImage(y));
 
 			T->set(x, y, 1.0);
 			T->set(y, x, 1.0); //set T symmetrically
