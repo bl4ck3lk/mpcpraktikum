@@ -9,6 +9,9 @@
 
 #include "CMEstimatorGPUSorted.h"
 #include <thrust/sort.h>
+#include <thrust/device_ptr.h>
+#include <thrust/device_vector.h>
+#include <thrust/copy.h>
 
 #define CUDA_CHECK_ERROR() {							\
     cudaError_t err = cudaGetLastError();					\
@@ -52,6 +55,7 @@ CMEstimatorGPUSorted::CMEstimatorGPUSorted() {
 Indices* CMEstimatorGPUSorted::getInitializationIndices(MatrixHandler* T, int initNr)
 {
 	Indices* initIndices = new Indices[initNr];
+	std::vector<int> chosenOnes; //max size will be initNr
 	int dim = T->getDimension();
 
 	//generate random index
@@ -69,20 +73,23 @@ Indices* CMEstimatorGPUSorted::getInitializationIndices(MatrixHandler* T, int in
 			//get random number
 			rIdx = rand() % (dim*dim);
 
-
 			//compute matrix indices with given continuous index sequence
 			x = rIdx/dim;
 			y = rIdx%dim;
 			c++;
-		} while ( ((rIdx > 1+(rIdx/dim)+(rIdx/dim)*dim) || (T->getVal(x,y) != 0))
+		} while ( ((rIdx < 1+(rIdx/dim)+(rIdx/dim)*dim)
+					|| (T->getVal(x,y) != 0)
+					|| (std::find(chosenOnes.begin(), chosenOnes.end(), rIdx) != chosenOnes.end()))
 				&& (c <= MAX_ITERATIONS) );
 		/* :TRICKY:
 		 * As long as the random number is not within the upper diagonal matrix w/o diagonal elements
-		 * or T(idx) != 0 generate a new random index but maximal MAX_ITERAtION times.
+		 * or T(idx) != 0 generate or already in the list of Indices, a new random index but maximal
+		 * MAX_ITERAtION times.
 		 */
 
 		if (c <= MAX_ITERATIONS) //otherwise initIndices contains -1 per struct definition
 		{
+			chosenOnes.push_back(rIdx);
 			initIndices[i].i = x;
 			initIndices[i].j = y;
 		}
@@ -103,6 +110,7 @@ Indices* CMEstimatorGPUSorted::getKBestConfMeasures(MatrixHandler* T, float* F, 
 	dim3 threadBlock(THREADS);
 	dim3 blockGrid(numBlocks);
 	cudaMalloc((void**)&gpuIndices, dim*dim*sizeof(int));
+	CUDA_CHECK_ERROR();
 
 	//init indices array such that indices = [-1,1,2,...], whereas the diagonal elements
 	//and the lower diagonal matrix contains -1. These entries should not be chosen
@@ -110,15 +118,26 @@ Indices* CMEstimatorGPUSorted::getKBestConfMeasures(MatrixHandler* T, float* F, 
 	initIndicesKernel<<<blockGrid, threadBlock>>>(gpuIndices, dim);
 	CUDA_CHECK_ERROR();
 
-	int* indices = new int[dim*dim];
-	cudaMemcpy(indices, gpuIndices, dim*dim*sizeof(int), cudaMemcpyDeviceToHost);
+    //wrap raw pointer with device pointer
+    thrust::device_ptr<int> dp_gpuIndices = thrust::device_pointer_cast(gpuIndices);
+	CUDA_CHECK_ERROR();
 
-	//sort array on GPU and sort indices array respectively
-	thrust::sort_by_key(F, F + dim*dim, indices, thrust::greater<float>()); 
+    //copy confidence measure matrix to device
+    thrust::device_vector<float> dev_F(F, F + dim*dim);
+	CUDA_CHECK_ERROR();
+
+	//sort CM-matrix on GPU and sort indices array respectively
+    thrust::sort_by_key(dev_F.begin(), dev_F.end(), dp_gpuIndices, thrust::greater<float>()); 
+	CUDA_CHECK_ERROR();
+
+    //download device memory
+	int* indices = new int[dim*dim];
+    thrust::copy(dp_gpuIndices, dp_gpuIndices+dim*dim, indices);
 	CUDA_CHECK_ERROR();
 
     //free gpu memory
     cudaFree(gpuIndices);
+    //dev_F is automatically freed by thrust
 
 	//get the kBest indices
 	Indices* kBestIndices = new Indices[kBest];
