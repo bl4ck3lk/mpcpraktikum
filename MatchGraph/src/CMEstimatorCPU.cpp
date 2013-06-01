@@ -9,6 +9,8 @@
 #include <stdio.h> //printen
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
+#include <vector>
+#include <algorithm> //std::find
 
 CMEstimatorCPU::CMEstimatorCPU() {
 	// TODO Auto-generated constructor stub
@@ -18,6 +20,7 @@ CMEstimatorCPU::CMEstimatorCPU() {
 Indices* CMEstimatorCPU::getInitializationIndices(MatrixHandler* T, int initNr)
 {
 	Indices* initIndices = new Indices[initNr];
+	std::vector<int> chosenOnes; //max size will be initNr
 	int dim = T->getDimension();
 
 	//generate random index
@@ -39,15 +42,19 @@ Indices* CMEstimatorCPU::getInitializationIndices(MatrixHandler* T, int initNr)
 			x = rIdx/dim;
 			y = rIdx%dim;
 			c++;
-		} while ( ((rIdx < 1+(rIdx/dim)+(rIdx/dim)*dim) || (T->getVal(x,y) != 0))
+		} while ( ((rIdx < 1+(rIdx/dim)+(rIdx/dim)*dim)
+					|| (T->getVal(x,y) != 0)
+					|| (std::find(chosenOnes.begin(), chosenOnes.end(), rIdx) != chosenOnes.end()))
 				&& (c <= MAX_ITERATIONS) );
 		/* :TRICKY:
 		 * As long as the random number is not within the upper diagonal matrix w/o diagonal elements
-		 * or T(idx) != 0 generate a new random index but maximal MAX_ITERAtION times.
+		 * or T(idx) != 0 generate or already in the list of Indices, a new random index but maximal
+		 * MAX_ITERAtION times.
 		 */
 
 		if (c <= MAX_ITERATIONS) //otherwise initIndices contains -1 per struct definition
 		{
+			chosenOnes.push_back(rIdx);
 			initIndices[i].i = x;
 			initIndices[i].j = y;
 		}
