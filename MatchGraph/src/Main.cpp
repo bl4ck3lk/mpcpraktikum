@@ -21,7 +21,7 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-	const char* dir = "../resource/notre_dame_8"; //TODO use input-parameter
+	const char* dir = "../resource/notre_dame_40"; //TODO use input-parameter
 
 	////////////////////////
 	//computation handlers//
