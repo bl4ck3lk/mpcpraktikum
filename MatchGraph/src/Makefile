@@ -54,6 +54,8 @@ CC         := gcc
 LINK       := g++ -fPIC
 
 # Includes
+PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/graphics/projects/opt/OpenCV-2.4.5/lib/pkgconfig
+export PKG_CONFIG_PATH
 INCLUDES  += -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_SDK_DIR)/C/common/inc -I /lib/Eigen `pkg-config opencv --cflags`
 CXXFLAGS += $(INCLUDES)
 CFLAGS += $(INCLUDES)
