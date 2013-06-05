@@ -8,6 +8,9 @@
  */
 
 #include "CMEstimatorGPUSorted.h"
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
+#include <vector>
 #include <thrust/sort.h>
 #include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
