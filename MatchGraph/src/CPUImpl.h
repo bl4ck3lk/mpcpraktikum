@@ -25,11 +25,13 @@ public:
 	void set(int i, int j, float val);
 	unsigned int getDimension();
 	float* getConfMatrixF();
+	Eigen::MatrixXf getModLaplacian();
 	char* getMatrAsArray();
 	char getVal(int i, int j);
 	int getSimiliarities();
 	void print();
 	void writeGML(char* filename, bool similar, bool dissimilar, bool potential);
+	static void testLaplacian(char* gpuData, int* laplacian, int dim, float lambda);
 };
 
 #endif /* CPUIMPL_H_ */

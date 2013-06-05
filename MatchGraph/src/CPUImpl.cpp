@@ -23,7 +23,7 @@ void CPUImpl::init(int _dim, float _lambda)
 {
 	dim = _dim;
 	lambda = _lambda;
-	bool test = false;
+	bool test = true;
 
 	if (test) {
 		testInit();
@@ -59,14 +59,39 @@ void CPUImpl::testInit()
 	m(2,5) = 1; m(5,2) = 1;
 
 	m(1,9) = 1; m(9,1) = 1;
-	writeGML("graphT0.GML", true, true, false);
+	//writeGML("graphT0.GML", true, true, false);
 }
 
 float* CPUImpl::getConfMatrixF()
 {
+	Eigen::MatrixXf laplacian = getModLaplacian();
+
+	Eigen::MatrixXf F = Eigen::MatrixXf::Zero(dim, dim);
+	for (int j = 0; j < dim; j++) {
+		F.col(j) = laplacian.colPivHouseholderQr().solve(m.col(j));
+	}
+
+	F = symmetrize(F, dim);
+
+	std::cout << "F is: \n" << F << std::endl;
+
+	//to float*
+	float* arr = new float[dim*dim];
+	for (int i = 0; i < dim; i++)
+	{
+		for (int j = 0; j < dim; j++)
+		{
+			arr[i*dim+j] = (float)F(i,j);
+		}
+	}
+	return arr;
+}
+
+Eigen::MatrixXf CPUImpl::getModLaplacian()
+{
 	Eigen::MatrixXf res = Eigen::MatrixXf::Zero(dim, dim);
 
-	//construct W
+	//construct W //TODO do not need to explicitly construct W
 	for (int i = 0; i < dim; i++) {
 		for (int j = 0; j < dim; j++) {
 			if (m(i, j) > 0) {
@@ -92,26 +117,9 @@ float* CPUImpl::getConfMatrixF()
 		}
 	}
 
+	std::cout << "Mod Laplacian is: \n" << res << std::endl;
 
-	Eigen::MatrixXf F = Eigen::MatrixXf::Zero(dim, dim);
-	for (int j = 0; j < dim; j++) {
-		F.col(j) = res.colPivHouseholderQr().solve(m.col(j));
-	}
-
-	F = symmetrize(F, dim);
-
-	std::cout << F << std::endl;
-
-	//to float*
-	float* arr = new float[dim*dim];
-	for (int i = 0; i < dim; i++)
-	{
-		for (int j = 0; j < dim; j++)
-		{
-			arr[i*dim+j] = (float)F(i,j);
-		}
-	}
-	return arr;
+	return res;
 }
 
 void CPUImpl::set(int i, int j, float val)
@@ -207,3 +215,5 @@ void CPUImpl::writeGML(char* filename, bool similar, bool dissimilar, bool poten
 		}
 	file << "]\n";
 }
+
+
