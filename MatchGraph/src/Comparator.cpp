@@ -17,7 +17,7 @@ using namespace std;
 using namespace cv;
 
 /** @function main */
-int main( int argc, char** argv )
+int run( int argc, char** argv )
 {
 
 	Mat im1 = imread( "data/coliseum2.jpg", CV_LOAD_IMAGE_COLOR );
