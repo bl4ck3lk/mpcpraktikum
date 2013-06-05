@@ -6,6 +6,7 @@
  */
 
 #include "CPUComparator.h"
+#include "Comparator.h"
 #include <stdio.h> //printf
 
 CPUComparator::CPUComparator()
@@ -16,6 +17,8 @@ CPUComparator::CPUComparator()
 
 void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int kBest, Indices* kBestIndices)
 {
+	Comparator comparator;
+
 	for(int i = 0; i < kBest; i++)
 	{
 		//if(doComparisonOfImages(image[index1[i]] , image[index2[i]]) TELLS Similar)
@@ -29,8 +32,10 @@ void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int k
 		{
 			printf("[CPUComparator]: Comparing image %i: %s with image %i: %s\n", x, iHandler->getImage(x), y, iHandler->getImage(y));
 
-			T->set(x, y, 1.0);
-			T->set(y, x, 1.0); //set T symmetrically
+			float result = float(comparator.compare(iHandler->getImage(x), iHandler->getImage(y)));
+
+			T->set(x, y, result);
+			T->set(y, x, result); //set T symmetrically
 		}
 	}
 
