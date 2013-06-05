@@ -11,13 +11,14 @@
 #include <opencv2/calib3d/calib3d.hpp> // for homography
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include "Comparator.h"
 #include <vector>
 
 using namespace std;
 using namespace cv;
 
 /** @function main */
-int Comparator::run(char* img1, char* img2)
+int Comparator::compare(const char* img1, const char* img2)
 {
 
 	Mat im1 = imread( img1, CV_LOAD_IMAGE_COLOR );
@@ -62,8 +63,8 @@ int Comparator::run(char* img1, char* img2)
 	extractor.compute( im2, keypoints2, descriptors2 );
 
 
-	cout << "descriptors1 = " << descriptors1.size().height << endl << endl;
-	cout << "descriptors2 = "<< descriptors2.size().height << endl << endl;
+	//cout << "descriptors1 = " << descriptors1.size().height << endl << endl;
+	//cout << "descriptors2 = "<< descriptors2.size().height << endl << endl;
 
 	//-- Step 3: Matching descriptor vectors using FLANN matcher
 	//FlannBasedMatcher matcher;
@@ -96,7 +97,7 @@ int Comparator::run(char* img1, char* img2)
 
 	float k = (2 * good_matches.size()) / float(descriptors1.size().height + descriptors2.size().height);
 
-	cout << "k(I_i, I_j) = " << k << endl;
+	//cout << "k(I_i, I_j) = " << k << endl;
 
 	//if (good_matches.size() < 10) return match;
 	//if (good_matches.size() >= 10 && score >= 0.9) match = 1;

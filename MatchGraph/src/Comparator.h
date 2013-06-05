@@ -10,7 +10,7 @@
 
 class Comparator {
 public:
-	int compare(char* img1, char* img2);
+	int compare(const char* img1, const char* img2);
 	~Comparator(){};
 
 };
