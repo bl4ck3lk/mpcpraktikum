@@ -4,7 +4,7 @@ TARGET		:= Main
 # Cuda source files (compiled with cudacc)
 CUFILES		:= CMEstimatorGPUSorted.cu
 # C/C++ source files (compiled with gcc / c++)
-CCFILES		:= Main.cpp CPUImpl.cpp CPUComparator.cpp CMEstimatorCPU.cpp ImageHandler.cpp
+CCFILES		:= Main.cpp CPUImpl.cpp CPUComparator.cpp CMEstimatorCPU.cpp ImageHandler.cpp Comparator.cpp
 
 #/graphics/projects/cuda/cula_r14/lib64
 
@@ -54,7 +54,7 @@ CC         := gcc
 LINK       := g++ -fPIC
 
 # Includes
-INCLUDES  += -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_SDK_DIR)/C/common/inc -I /lib/Eigen
+INCLUDES  += -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_SDK_DIR)/C/common/inc -I /lib/Eigen `pkg-config opencv --cflags`
 CXXFLAGS += $(INCLUDES)
 CFLAGS += $(INCLUDES)
 NVCCFLAGS += $(INCLUDES)
@@ -79,7 +79,7 @@ CFLAGS += $(COMMONFLAGS)
 NVCCFLAGS += $(COMMONFLAGS)
 
 
-LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64 -lcudart
+LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64 -lcudart `pkg-config opencv --libs`
 
 
 OBJS := $(patsubst %.cpp,%.o,$(CCFILES))
