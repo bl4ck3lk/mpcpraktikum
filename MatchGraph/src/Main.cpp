@@ -5,6 +5,7 @@
  *      Author: gufler, Fabian
  */
 
+#include "GPUMatrix.h"
 #include "CPUImpl.h"
 #include "CPUComparator.h"
 #include "CMEstimatorCPU.h"
@@ -14,13 +15,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define TESTMATRIX 0 //to enable test matrix, one has to set the test bool in T->init to true
+#define TESTMATRIX 1 //to enable test matrix, one has to set the test bool in T->init to true
 
 using namespace std;
 
 int main(int argc, char** argv)
 {
-	const char* dir = "../resource/notre_dame_40"; //todo use input-parameter
+	const char* dir = "../resource/notre_dame_8"; //TODO use input-parameter
 
 	////////////////////////
 	//computation handlers//
@@ -87,6 +88,8 @@ int main(int argc, char** argv)
 
 		//compute confidence measure matrix
 		float* f = T->getConfMatrixF();
+
+//		return 1;
 
 		//determine the k-best values in confidence measure matrix
 		Indices* bestIndices = CME->getKBestConfMeasures(T, f, kBest);
