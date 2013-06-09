@@ -1,15 +1,26 @@
 /*
  * CMEstimatorGPUApprox.cpp
  *
+ * Generates a list of indices containing the i, j index of approx. the 
+ * k-best confidence measure values. 
+ * This implementation handles arbitrary large matrices, as long as one
+ * row of the confidence measure matrix and one int array of the same
+ * size fits into device memory.
+ *
  *  Created on: 05.06.2013
- *      Author: furby
+ *      Author: Fabian
  */
 
 #include "CMEstimatorGPUApprox.h"
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
 #include <vector>
-
+#include <algorithm> /* std::find */
+#include <stdio.h> /* printf */
+#include <thrust/sort.h>
+#include <thrust/device_ptr.h>
+#include <thrust/device_vector.h>
+#include <thrust/copy.h>
 
 #define CUDA_CHECK_ERROR() {							\
     cudaError_t err = cudaGetLastError();					\
@@ -21,10 +32,11 @@
 }
 
 const int THREADS = 256;
+//const unsigned long MAX_DEVICE_MEMORY_BYTES = 512; //for testing purpose with dim=10
 const unsigned long MAX_DEVICE_MEMORY_BYTES = 1073741824; //1 GB
 
 //Initialize indices
-static __global__ void initIndicesKernel(int* gpuIndices, const int elements, const int offset)
+static __global__ void initIndicesKernel(int* gpuIndices, const int elements, const int offset, const int dim)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -34,7 +46,7 @@ static __global__ void initIndicesKernel(int* gpuIndices, const int elements, co
 		 * Any index in the lower diagonal matrix incl. diagonal elements
 	 	 * will contain a -1, otherwise the index nr.
 		 */
-		if (idx < 1+(idx/dim)+(idx/dim)*dim)
+		if ((idx+offset) < 1+((idx+offset)/dim)+((idx+offset)/dim)*dim)
 		{
 			gpuIndices[idx] = -1;
 		}
@@ -114,6 +126,15 @@ Indices* CMEstimatorGPUApprox::getKBestConfMeasures(MatrixHandler* T, float* F, 
 	unsigned int nrCyclesForMatrix = (dim%nrRowsFitInMemory == 0) ? (dim/nrRowsFitInMemory) : (dim/nrRowsFitInMemory) + 1;
 	unsigned int elements = nrRowsFitInMemory*dim; //per Cycle
 
+	//debug
+	if (true)
+	{
+		printf("\tCMEstimatorGPUApprox:\n");
+		printf("\tNumber of cycles for whole matrix: %i\n",nrCyclesForMatrix);
+		printf("\tMax. number of rows per cycle: %lu\n",nrRowsFitInMemory);
+		printf("\tNumber of elements processed per cycle: %i\n", elements);
+	}
+
 	//Allocate arrays on device
 	int* gpuIndices;
 	cudaMalloc((void**)&gpuIndices, elements*sizeof(int));
@@ -127,7 +148,6 @@ Indices* CMEstimatorGPUApprox::getKBestConfMeasures(MatrixHandler* T, float* F, 
 	dim3 threadBlock(THREADS);
 	dim3 blockGrid(numBlocks);
 
-
 	//Process matrix as long as indices are needed or till done
 	for(int i = 0; i < nrCyclesForMatrix && countBest < kBest; i++)
 	{
@@ -135,7 +155,7 @@ Indices* CMEstimatorGPUApprox::getKBestConfMeasures(MatrixHandler* T, float* F, 
 		//and the lower diagonal matrix contains -1. These entries should not be chosen
 		//later because the matrix is symmetric.
 		unsigned int offset = i*elements;
-		initIndicesKernel<<<blockGrid, threadBlock>>>(gpuIndices, elements, offset);
+		initIndicesKernel<<<blockGrid, threadBlock>>>(gpuIndices, elements, offset, dim);
 		CUDA_CHECK_ERROR();
 
 		//copy part of confidence measure matrix to device
@@ -173,7 +193,7 @@ Indices* CMEstimatorGPUApprox::getKBestConfMeasures(MatrixHandler* T, float* F, 
 			 * but if there aren't any left (-1 or T(x,y)=0) add the not chosen slots
 			 * to the next turn to avoid getting much less than desired.
 			 */
-			if (chosen >= (kBest/(nrCyclesForMatrix-1)) + (i*(kBest/(nrCyclesForMatrix-1)) - countBest))
+			if ((1 < nrCyclesForMatrix) && (chosen >= (kBest/(nrCyclesForMatrix-1)) + (i*(kBest/(nrCyclesForMatrix-1)) - countBest)))
 				break;
 		}
 	}

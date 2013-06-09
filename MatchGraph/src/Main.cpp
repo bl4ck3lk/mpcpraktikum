@@ -9,7 +9,8 @@
 #include "CPUImpl.h"
 #include "CPUComparator.h"
 #include "CMEstimatorCPU.h"
-//#include "CMEstimatorGPUSorted.h"
+#include "CMEstimatorGPUSorted.h"
+#include "CMEstimatorGPUApprox.h"
 #include "ImageHandler.h"
 #include <iostream>
 #include <stdlib.h>
@@ -29,6 +30,7 @@ int main(int argc, char** argv)
 	MatrixHandler* T = new CPUImpl();
 	CMEstimator* CME = new CMEstimatorCPU();
     	//CMEstimator* CME = new CMEstimatorGPUSorted();
+    	//CMEstimator* CME = new CMEstimatorGPUApprox();
 	ImageComparator* comparator = new CPUComparator();
 	ImageHandler* iHandler = new ImageHandler(dir);
 	printf("Directory %s with %i files initialized.\n", dir, iHandler->getTotalNr());
@@ -36,8 +38,10 @@ int main(int argc, char** argv)
 	////////////
 	//Settings//
 	////////////
-	//int dim 		= 10;
 	int dim			= iHandler->getTotalNr();
+#if TESTMATRIX
+	dim	 		= 10;
+#endif
 
 	const int MAX_INIT_ITERATIONS 	= dim*(dim/2); //#elements in upper diagonal matrix
 	const int MIN_INIT_SIMILARITIES = 2*dim;
@@ -61,8 +65,8 @@ int main(int argc, char** argv)
 			cout << "Init T:\n"<< endl;
 			T->print();
 
-			int c = 0;
 #if !TESTMATRIX
+			int c = 0;
 			//Initialization matrix should contain sufficient similarities
 			while(MIN_INIT_SIMILARITIES >  T->getSimiliarities()  && MAX_INIT_ITERATIONS > c)
 			{

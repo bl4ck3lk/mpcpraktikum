@@ -26,7 +26,7 @@ class ImageHandler
 	private:
 		std::map<int,std::string> images;
 		int nrImages; //total number of images
-		const char* directory;
+		std::string directory;
 };
 
 #endif /* CPUIMPL_H_ */

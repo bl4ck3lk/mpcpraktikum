@@ -1,16 +1,21 @@
 /*
  * CMEstimatorGPUSorted.cpp
  *
+ * Generates a list of indices containing the i, j index of the k-best
+ * confidence measure values. 
+ * This implementation stores the whole confidence measure matrix and
+ * an int array of size dim*dim in device memory. Thus it only works
+ * for smaller dimensions.
+ *
  *  Created on: 30.05.2013
  *      Author: Fabian
- *
- * This class finds the kBest values in a given array on GPU.
  */
 
 #include "CMEstimatorGPUSorted.h"
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
 #include <vector>
+#include <algorithm> /* std::find */
 #include <thrust/sort.h>
 #include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
