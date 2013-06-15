@@ -59,7 +59,7 @@ LINK       := g++ -fPIC
 
 PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/graphics/projects/opt/OpenCV-2.4.1_cuda/lib/pkgconfig
 export PKG_CONFIG_PATH
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/graphics/projects/opt/OpenCV-2.4.5/lib
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/graphics/projects/opt/OpenCV-2.4.1_cuda/lib
 export LD_LIBRARY_PATH
 INCLUDES  += -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_SDK_DIR)/C/common/inc -I /lib/Eigen -I /graphics/projects/cuda/cula_r14/include `pkg-config opencv --cflags` 
 
