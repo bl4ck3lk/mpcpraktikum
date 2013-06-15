@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <iostream>
 #include <stdlib.h>     /* abs */
-#include <algorithm>    // std::max
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/features2d.hpp> //This is where actual SURF and SIFT algorithm is located
@@ -10,13 +9,14 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp> // for homography
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/gpu/gpu.hpp>
 #include "Comparator.h"
 
 #include <vector>
 
 using namespace std;
 using namespace cv;
-
+using namespace cv::gpu;
 
 int Comparator::compare(char* img1, char* img2, bool showMatches, bool drawEpipolar)
 {
@@ -36,11 +36,12 @@ int Comparator::compare(char* img1, char* img2, bool showMatches, bool drawEpipo
 	{ std::cout<< " --(!) Error reading images " << std::endl; return -1; }
 
 	//-- Step 1: Detect the keypoints using SURF Detector
-	int minHessian = 400;
+	//	int minHessian = 400;
 
-	//bool draw = argv[3]; // draw results?
+	int thresholdMatchPoints = 20;
+	bool verbose = false;
 
-//	SurfFeatureDetector detector(minHessian);
+	//	SurfFeatureDetector detector(minHessian);
 	SiftFeatureDetector detector;
 	//SurfDescriptorExtractor extractor;
 
@@ -50,7 +51,7 @@ int Comparator::compare(char* img1, char* img2, bool showMatches, bool drawEpipo
 	detector.detect( im2, keypoints2 );
 
 	//-- Step 2: Calculate descriptors (feature vectors)
-//	SiftDescriptorExtractor extractor(1, 3, 5.0, 5.0, 20.0);
+	//	SiftDescriptorExtractor extractor(1, 3, 5.0, 5.0, 20.0);
 	SiftDescriptorExtractor extractor;
 
 	Mat descriptors1, descriptors2;
@@ -81,23 +82,35 @@ int Comparator::compare(char* img1, char* img2, bool showMatches, bool drawEpipo
 			matches2, // vector of matches (up to 2 per entry)
 			2);		  // return 2 nearest neighbours
 
-	std::cout << "Number of matched points 1->2: " << matches1.size() << std::endl;
-	std::cout << "Number of matched points 2->1: " << matches2.size() << std::endl;
+	if (verbose) {
+		std::cout << "Number of matched points 1->2: " << matches1.size() << std::endl;
+		std::cout << "Number of matched points 2->1: " << matches2.size() << std::endl;
+	}
 
 	// 3. Remove matches for which NN ratio is > than threshold
 
 	// clean image 1 -> image 2 matches
 	int removed = ratioTest(matches1);
-	std::cout << "Number of matched points 1->2 (ratio test) : " << matches1.size()-removed << std::endl;
 	// clean image 2 -> image 1 matches
 	removed= ratioTest(matches2);
-	std::cout << "Number of matched points 2->1 (ratio test) : " << matches2.size()-removed << std::endl;
 
+	if (verbose) {
+		std::cout << "Number of matched points 1->2 (ratio test) : " << matches1.size()-removed << std::endl;
+		std::cout << "Number of matched points 2->1 (ratio test) : " << matches2.size()-removed << std::endl;
+	}
 	// 4. Remove non-symmetrical matches
 	std::vector<cv::DMatch> symMatches;
 	symmetryTest(matches1,matches2,symMatches);
 
-	std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
+	if (verbose) {
+		std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
+	}
+	if (symMatches.size() < thresholdMatchPoints) return -1;
+
+	float k = (2 * symMatches.size()) / float(descriptors1.size().height + descriptors2.size().height);
+	//cout << "k(I_i, I_j) = " << k << endl;
+	if (k < 0.01) return -1;
+
 
 	// 5. Validate matches using RANSAC
 	cv::Mat fundamental= ransacTest(symMatches, keypoints1, keypoints2, matches);
@@ -158,14 +171,17 @@ int Comparator::compare(char* img1, char* img2, bool showMatches, bool drawEpipo
 		}
 	}
 
-	// Display the images
-	cv::namedWindow("Right Image Epilines (RANSAC)");
-	cv::imshow("Right Image Epilines (RANSAC)",im1);
-	cv::namedWindow("Left Image Epilines (RANSAC)");
-	cv::imshow("Left Image Epilines (RANSAC)",im2);
+	if (showMatches)
+	{
+		// Display the images
+		cv::namedWindow("Right Image Epilines (RANSAC)");
+		cv::imshow("Right Image Epilines (RANSAC)",im1);
+		cv::namedWindow("Left Image Epilines (RANSAC)");
+		cv::imshow("Left Image Epilines (RANSAC)",im2);
 
-	cv::waitKey();
-	return -1;
+		cv::waitKey();
+	}
+	return 1;
 }
 
 
@@ -254,10 +270,10 @@ cv::Mat Comparator::ransacTest(const std::vector<cv::DMatch>& matches,
 	}
 	float confidence = 0.98;
 	float distance = 3.0;
-	bool refineF = false;
+	bool refineF = true;
 	// Compute F matrix using RANSAC
 	std::vector<uchar> inliers(points1.size(),0);
-	cv::Mat fundemental = cv::findFundamentalMat(
+	cv::Mat fundamental = cv::findFundamentalMat(
 			cv::Mat(points1),cv::Mat(points2), // matching points
 			inliers,      // match status (inlier ou outlier)
 			CV_FM_RANSAC, // RANSAC method
@@ -299,18 +315,18 @@ cv::Mat Comparator::ransacTest(const std::vector<cv::DMatch>& matches,
 		}
 
 		// Compute 8-point F from all accepted matches
-		fundemental= cv::findFundamentalMat(
+		fundamental= cv::findFundamentalMat(
 				cv::Mat(points1),cv::Mat(points2), // matching points
 				CV_FM_8POINT); // 8-point method
 	}
 
-	return fundemental;
+	return fundamental;
 }
 /*
 int main( int argc, char** argv )
 {
 	Comparator comp;
-	int result = comp.compare("data/lib1.jpg", "data/lib3.jpg", false, false);
+	int result = comp.compare("data/coliseum1.jpg", "data/coliseum2.jpg", false, false);
 	cout << "result = " << result << endl;
 }
 */

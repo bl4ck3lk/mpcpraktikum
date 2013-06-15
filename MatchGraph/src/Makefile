@@ -4,7 +4,7 @@ TARGET		:= Main
 # Cuda source files (compiled with cudacc)
 CUFILES		:= CMEstimatorGPUSorted.cu CMEstimatorGPUApprox.cu GPUMatrix.cu
 # C/C++ source files (compiled with gcc / c++)
-CCFILES		:= Main.cpp CPUImpl.cpp CPUComparator.cpp CMEstimatorCPU.cpp ImageHandler.cpp Tester.cpp #Comparator.cpp
+CCFILES		:= Main.cpp CPUImpl.cpp CPUComparator.cpp CMEstimatorCPU.cpp ImageHandler.cpp Tester.cpp Comparator.cpp Comparator_CVGPU.cpp
 
 
 
@@ -57,9 +57,11 @@ LINK       := g++ -fPIC
 
 # Includes
 
-#PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/graphics/projects/opt/OpenCV-2.4.5/lib/pkgconfig
-#export PKG_CONFIG_PATH
-INCLUDES  += -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_SDK_DIR)/C/common/inc -I /lib/Eigen -I /graphics/projects/cuda/cula_r14/include #`pkg-config opencv --cflags` 
+PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/graphics/projects/opt/OpenCV-2.4.1_cuda/lib/pkgconfig
+export PKG_CONFIG_PATH
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/graphics/projects/opt/OpenCV-2.4.1_cuda/lib
+export LD_LIBRARY_PATH
+INCLUDES  += -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_SDK_DIR)/C/common/inc -I /lib/Eigen -I /graphics/projects/cuda/cula_r14/include `pkg-config opencv --cflags` 
 
 CXXFLAGS += $(INCLUDES)
 CFLAGS += $(INCLUDES)
@@ -85,7 +87,7 @@ CFLAGS += $(COMMONFLAGS)
 NVCCFLAGS += $(COMMONFLAGS)
 
 
-LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64 -lcudart -L /graphics/projects/cuda/cula_r14/lib64 #`pkg-config opencv --libs`
+LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64 -lcudart -L /graphics/projects/cuda/cula_r14/lib64 `pkg-config opencv --libs`
 
 
 OBJS := $(patsubst %.cpp,%.o,$(CCFILES))

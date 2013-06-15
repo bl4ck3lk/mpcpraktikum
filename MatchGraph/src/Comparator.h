@@ -10,7 +10,7 @@
 
 class Comparator {
 public:
-	int compare(char* img1, char* img2, bool showMatches=true, bool drawEpipolar=false);
+	int compare(char* img1, char* img2, bool showMatches=false, bool drawEpipolar=false);
 
 	int ratioTest(std::vector< std::vector<cv::DMatch> >& matches);
 
