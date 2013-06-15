@@ -22,6 +22,7 @@ class ImageHandler
 		int getMapSize();
 		void printMap();
 		void sortImages();
+		void fillWithEmptyImages(unsigned int num);
 
 	private:
 		std::map<int,std::string> images;

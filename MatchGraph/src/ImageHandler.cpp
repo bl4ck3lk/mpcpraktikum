@@ -83,9 +83,19 @@ const char* ImageHandler::getImage(int imgNr)
 //Get full image path based on image nr.
 const char* ImageHandler::getFullImagePath(int imgNr)
 {
-	std::string dir = directory;
-	dir.append("/");
-	return (dir.append(getImage(imgNr))).c_str();
+	std::string* dir = new std::string(directory);
+	dir->append("/");
+	return (dir->append(getImage(imgNr))).c_str();
+}
+
+void ImageHandler::fillWithEmptyImages(unsigned int num)
+{
+	images.clear();
+	nrImages = 0;
+	for(unsigned int i = 0; i < num; i++)
+	{
+		images.insert(std::pair<int,std::string>(nrImages++, ""));
+	}
 }
 
 
