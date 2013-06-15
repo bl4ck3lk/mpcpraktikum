@@ -39,6 +39,8 @@ int Comparator::compare(char* img1, char* img2, bool showMatches, bool drawEpipo
 	//	int minHessian = 400;
 
 	int thresholdMatchPoints = 20;
+	bool verbose = false;
+
 	//	SurfFeatureDetector detector(minHessian);
 	SiftFeatureDetector detector;
 	//SurfDescriptorExtractor extractor;
@@ -80,24 +82,29 @@ int Comparator::compare(char* img1, char* img2, bool showMatches, bool drawEpipo
 			matches2, // vector of matches (up to 2 per entry)
 			2);		  // return 2 nearest neighbours
 
-	std::cout << "Number of matched points 1->2: " << matches1.size() << std::endl;
-	std::cout << "Number of matched points 2->1: " << matches2.size() << std::endl;
+	if (verbose) {
+		std::cout << "Number of matched points 1->2: " << matches1.size() << std::endl;
+		std::cout << "Number of matched points 2->1: " << matches2.size() << std::endl;
+	}
 
 	// 3. Remove matches for which NN ratio is > than threshold
 
 	// clean image 1 -> image 2 matches
 	int removed = ratioTest(matches1);
-	std::cout << "Number of matched points 1->2 (ratio test) : " << matches1.size()-removed << std::endl;
 	// clean image 2 -> image 1 matches
 	removed= ratioTest(matches2);
-	std::cout << "Number of matched points 2->1 (ratio test) : " << matches2.size()-removed << std::endl;
 
+	if (verbose) {
+		std::cout << "Number of matched points 1->2 (ratio test) : " << matches1.size()-removed << std::endl;
+		std::cout << "Number of matched points 2->1 (ratio test) : " << matches2.size()-removed << std::endl;
+	}
 	// 4. Remove non-symmetrical matches
 	std::vector<cv::DMatch> symMatches;
 	symmetryTest(matches1,matches2,symMatches);
 
-	std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
-
+	if (verbose) {
+		std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
+	}
 	if (symMatches.size() < thresholdMatchPoints) return -1;
 
 	float k = (2 * symMatches.size()) / float(descriptors1.size().height + descriptors2.size().height);
@@ -322,4 +329,4 @@ int main( int argc, char** argv )
 	int result = comp.compare("data/coliseum1.jpg", "data/coliseum2.jpg", false, false);
 	cout << "result = " << result << endl;
 }
-*
+/*
