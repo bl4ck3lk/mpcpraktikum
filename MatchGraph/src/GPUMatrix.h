@@ -20,15 +20,15 @@ private:
 	float lambda;
 	void setOnHost(int, int, char);
 public:
-	GPUMatrix();
+	GPUMatrix(int dim, float lambda);
 	//~GPUMatrix();
-	void init(int dim, float lambda);
-	void set(int i, int j, float val);
+	void set(int i, int j, bool val);
 	unsigned int getDimension();
 	float* getConfMatrixF();
 	char* getMatrAsArray();
 	char getVal(int i, int j);
-	int getSimiliarities();
+	float* getColumn(int i);
+	int getSimilarities();
 	void print();
 	void writeGML(char* filename, bool similar, bool dissimilar, bool potential);
 };

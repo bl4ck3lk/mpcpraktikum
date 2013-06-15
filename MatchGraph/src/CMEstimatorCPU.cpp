@@ -11,6 +11,7 @@
 #include <time.h>       /* time */
 #include <vector>
 #include <algorithm> //std::find
+#include <iostream> //TODO remove later
 
 CMEstimatorCPU::CMEstimatorCPU() {
 	// TODO Auto-generated constructor stub
@@ -78,6 +79,8 @@ Indices* CMEstimatorCPU::getKBestConfMeasures(MatrixHandler* T, float* F, int kB
 		kBestEntries[j].i = -1;
 		kBestEntries[j].j = -1;
 	}
+
+
 
 	//linear search
 	/* :TRICKY:
