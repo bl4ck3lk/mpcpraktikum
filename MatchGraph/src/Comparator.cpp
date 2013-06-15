@@ -329,4 +329,4 @@ int main( int argc, char** argv )
 	int result = comp.compare("data/coliseum1.jpg", "data/coliseum2.jpg", false, false);
 	cout << "result = " << result << endl;
 }
-/*
+*/
