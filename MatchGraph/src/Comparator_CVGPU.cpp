@@ -268,9 +268,11 @@ cv::Mat ComparatorCVGPU::ransacTest(const std::vector<cv::DMatch>& matches,
 
 	return fundamental;
 }
+/*
 int main( int argc, char** argv )
 {
 	ComparatorCVGPU comp;
 	int result = comp.compareGPU(argv[1], argv[2], true, false);
 	cout << "result = " << result << endl;
 }
+*/
