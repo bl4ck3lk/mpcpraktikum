@@ -6,7 +6,7 @@
  */
 
 #include "CPUComparator.h"
-#include "Comparator.h"
+//#include "Comparator.h"
 #include <stdio.h> //printf
 
 CPUComparator::CPUComparator()
@@ -34,7 +34,7 @@ void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int k
 
 		if (x != -1)
 		{
-			//Bug: looses names
+			//FIXME Bug: looses names
 			//printf("[CPUComparator]: Comparing image %i: %s with image %i: %s\n", x, iHandler->getFullImagePath(x), y, iHandler->getFullImagePath(y));
 			
 			printf("[CPUComparator]: Comparing image %i: %s with image %i: %s\n", x, iHandler->getImage(x), y, iHandler->getImage(y));
