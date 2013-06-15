@@ -44,34 +44,34 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
 	std::vector<float> im1_descriptors, im2_descriptors;
 	std::vector<std::vector< cv::DMatch> > matches;
  
-		// upload images into the GPU
-		im1_gpu.upload(im1);
-		im2_gpu.upload(im2);
+	// upload images into the GPU
+	im1_gpu.upload(im1);
+	im2_gpu.upload(im2);
  
-		// detect keypoints & compute descriptors
-		surf(im1_gpu, cv::gpu::GpuMat(), im1_keypoints_gpu, im1_descriptors_gpu, false);
-		surf(im2_gpu, cv::gpu::GpuMat(), im2_keypoints_gpu, im2_descriptors_gpu, false);
- 
-
-		surf.downloadKeypoints(im1_keypoints_gpu, im1_keypoints);
-		surf.downloadKeypoints(im2_keypoints_gpu, im2_keypoints);
-		surf.downloadDescriptors(im1_descriptors_gpu, im1_descriptors);
-		surf.downloadDescriptors(im2_descriptors_gpu, im2_descriptors);
+	// detect keypoints & compute descriptors
+	surf(im1_gpu, cv::gpu::GpuMat(), im1_keypoints_gpu, im1_descriptors_gpu, false);
+	surf(im2_gpu, cv::gpu::GpuMat(), im2_keypoints_gpu, im2_descriptors_gpu, false);
  
 
-		cv::gpu::BruteForceMatcher_GPU< cv::L2<float> > matcher;
-		cv::gpu::GpuMat trainIdx, distance;
-		matcher.radiusMatch(im1_descriptors_gpu, im2_descriptors_gpu, matches, 0.1f);
+	surf.downloadKeypoints(im1_keypoints_gpu, im1_keypoints);
+	surf.downloadKeypoints(im2_keypoints_gpu, im2_keypoints);
+	surf.downloadDescriptors(im1_descriptors_gpu, im1_descriptors);
+	surf.downloadDescriptors(im2_descriptors_gpu, im2_descriptors);
  
-		Mat img_matches;
-		if (showMatches) {
+
+	cv::gpu::BruteForceMatcher_GPU< cv::L2<float> > matcher;
+	cv::gpu::GpuMat trainIdx, distance;
+	matcher.radiusMatch(im1_descriptors_gpu, im2_descriptors_gpu, matches, 0.1f);
+ 
+	Mat img_matches;
+	if (showMatches) 
+	{
 		cv::drawMatches(im1, im1_keypoints, im2, im2_keypoints, matches, img_matches);
- 
 		cv::imshow("Matches", img_matches);
 		cv::waitKey();
-	 	}
+	 }
  
-return 0;
+	return 0;
 
 }
 
