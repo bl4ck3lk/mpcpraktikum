@@ -88,6 +88,16 @@ const char* ImageHandler::getFullImagePath(int imgNr)
 	return (dir.append(getImage(imgNr))).c_str();
 }
 
+void ImageHandler::fillWithEmptyImages(unsigned int num)
+{
+	images.clear();
+	nrImages = 0;
+	for(unsigned int i = 0; i < num; i++)
+	{
+		images.insert(std::pair<int,std::string>(nrImages++, ""));
+	}
+}
+
 
 // tries to sort images based on filename under assumption filename begins with number
 // ATTENTION: this function is currently just a bad hack for testing purpose!!!
