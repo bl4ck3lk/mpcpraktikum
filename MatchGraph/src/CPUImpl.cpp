@@ -9,39 +9,26 @@
 #include <iostream>
 #include <fstream>
 
-CPUImpl::CPUImpl()
+CPUImpl::CPUImpl(int _dim, float _lambda)
 {
-	// TODO Auto-generated constructor stub
+	dim = _dim;
+		lambda = _lambda;
+		bool test = false;
+
+		if (test) {
+			testInit();
+		} else {
+
+			//Initialize empty matrix and do random comparisons to fill it
+			m = Eigen::MatrixXf::Zero(dim, dim);
+
+		}
 }
 
 /*CPUImpl::~CPUImpl()
 {
 	// TODO Auto-generated destructor stub
 }*/
-
-void CPUImpl::init(int _dim, float _lambda)
-{
-	dim = _dim;
-	lambda = _lambda;
-	bool test = true;
-
-	if (test) {
-		testInit();
-	} else {
-
-		//Initialize empty matrix and do random comparisons to fill it
-		m = Eigen::MatrixXf::Zero(dim, dim);
-
-		/*
-		for (int i = 0; i < dim; i++) {
-			for (int j = 0; j < dim; j++) {
-				m(i, j) = initMatrix[i * dim + j];
-			}
-		}
-		*/
-
-	}
-}
 
 void CPUImpl::testInit()
 {
@@ -73,7 +60,7 @@ float* CPUImpl::getConfMatrixF()
 
 	F = symmetrize(F, dim);
 
-	std::cout << "F is: \n" << F << std::endl;
+	std::cout << "F Matrix is: \n" << F << std::endl;
 
 	//to float*
 	float* arr = new float[dim*dim];
@@ -117,14 +104,14 @@ Eigen::MatrixXf CPUImpl::getModLaplacian()
 		}
 	}
 
-	std::cout << "Mod Laplacian is: \n" << res << std::endl;
+	//std::cout << "Mod Laplacian is: \n" << res << std::endl;
 
 	return res;
 }
 
-void CPUImpl::set(int i, int j, float val)
+void CPUImpl::set(int i, int j, bool val)
 {
-	m(i,j) = val;
+	m(i,j) = val ? 1 : -1;
 }
 
 void CPUImpl::print()
@@ -147,7 +134,7 @@ char CPUImpl::getVal(int i, int j)
 	return (char)m(i,j);
 }
 
-int CPUImpl::getSimiliarities()
+int CPUImpl::getSimilarities()
 {
 	int similarities = 0;
 	for(int i = 0; i < dim; i++)

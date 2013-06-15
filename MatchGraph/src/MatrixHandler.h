@@ -11,13 +11,12 @@
 class MatrixHandler {
 public:
 	virtual ~MatrixHandler(){};
-	virtual void init(int dim, float lambda) = 0;
-	virtual void set(int i, int j, float val) = 0;
+	virtual void set(int i, int j, bool val) = 0;
 	virtual unsigned int getDimension()= 0;
 	virtual float* getConfMatrixF()= 0;
 	virtual char* getMatrAsArray() = 0;
 	virtual char getVal(int i, int j) = 0;
-	virtual int getSimiliarities() = 0;
+	virtual int getSimilarities() = 0;
 	virtual void print() = 0;
 	virtual void writeGML(char* filename, bool similar, bool dissimilar, bool potential) = 0;
 };
