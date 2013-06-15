@@ -6,7 +6,6 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/features2d.hpp> //This is where actual SURF and SIFT algorithm is located
-#include <opencv2/nonfree/nonfree.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp> // for homography
 #include <opencv2/imgproc/imgproc.hpp>
@@ -22,7 +21,6 @@ using namespace cv::gpu;
 
 int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool drawEpipolar)
 {
-
 	cv::Mat im1 = imread( img1, 0 );
 	cv::Mat im2 = imread( img2, 0 );
 
@@ -34,7 +32,7 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
 	//imshow("i1",im1);
 	//imshow("i2",im2);
 
-	if( !im1.empty() || !im2.empty() )
+	if( !im1.data || !im2.data )
 	{ std::cout<< " --(!) Error reading images " << std::endl; return -1; }
 
 	cv::gpu::GpuMat im1_gpu, im2_gpu;
@@ -44,10 +42,8 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
  
 	std::vector<cv::KeyPoint> im1_keypoints, im2_keypoints;
 	std::vector<float> im1_descriptors, im2_descriptors;
-	std::vector<std::vector<cv::DMatch>> matches;
+	std::vector<std::vector< cv::DMatch> > matches;
  
-	while(true) 
-	{
 		// upload images into the GPU
 		im1_gpu.upload(im1);
 		im2_gpu.upload(im2);
@@ -63,29 +59,27 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
 		surf.downloadDescriptors(im2_descriptors_gpu, im2_descriptors);
  
 
-		cv::gpu::BruteForceMatcher_GPU<cv::L2<float>> matcher;
+		cv::gpu::BruteForceMatcher_GPU< cv::L2<float> > matcher;
 		cv::gpu::GpuMat trainIdx, distance;
 		matcher.radiusMatch(im1_descriptors_gpu, im2_descriptors_gpu, matches, 0.1f);
  
-
-		cv::drawMatches(im1, im1_keypoints, im2, im2_keypoints, matches, debug_img);
+		Mat img_matches;
+		if (showMatches) {
+		cv::drawMatches(im1, im1_keypoints, im2, im2_keypoints, matches, img_matches);
  
-		cv::imshow("debug_img", debug_img);
- 
-		int c = cv::waitKey(1);
-		if (c == 27) break;
-	}
+		cv::imshow("Matches", img_matches);
+		cv::waitKey();
+	 	}
  
 return 0;
 
 }
 
-
 /*
 int main( int argc, char** argv )
 {
-	Comparator comp;
-	int result = comp.compare("data/lib1.jpg", "data/lib3.jpg", false, false);
+	ComparatorCVGPU comp;
+	int result = comp.compareGPU(argv[1], argv[2], true, false);
 	cout << "result = " << result << endl;
 }
 */
