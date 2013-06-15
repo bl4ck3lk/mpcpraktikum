@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <iostream>
 #include <stdlib.h>     /* abs */
-#include <algorithm>    // std::max
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/features2d.hpp> //This is where actual SURF and SIFT algorithm is located
