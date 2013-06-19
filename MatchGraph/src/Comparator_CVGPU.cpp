@@ -79,10 +79,11 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
 	surf.downloadKeypoints(im2_keypoints_gpu, im2_keypoints);
 	surf.downloadDescriptors(im1_descriptors_gpu, im1_descriptors);
 	surf.downloadDescriptors(im2_descriptors_gpu, im2_descriptors);
- 
-	// 5. Validate matches using RANSAC
+
+	// 5. Validate matches (clean more) using RANSAC
 	std::vector<cv::DMatch> matches;
 	cv::Mat fundamental = ransacTest(symMatches, im1_keypoints, im2_keypoints, matches);
+	std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
 
 	//if (symMatches.size() < thresholdMatchPoints) return -1;
 
@@ -122,7 +123,7 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
 		cv::waitKey();
 	 }
  
-	return 0;
+	return 1;
 
 }
 
@@ -268,9 +269,10 @@ cv::Mat ComparatorCVGPU::ransacTest(const std::vector<cv::DMatch>& matches,
 
 	return fundamental;
 }
+/*
 int main( int argc, char** argv )
 {
 	ComparatorCVGPU comp;
 	int result = comp.compareGPU(argv[1], argv[2], true, false);
 	cout << "result = " << result << endl;
-}
+}*/
