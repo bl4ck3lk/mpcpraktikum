@@ -275,4 +275,9 @@ int main( int argc, char** argv )
 	ComparatorCVGPU comp;
 	int result = comp.compareGPU(argv[1], argv[2], true, false);
 	cout << "result = " << result << endl;
+<<<<<<< HEAD
 }*/
+=======
+}
+*/
+>>>>>>> 61d89c70cdd3dd02a190552a2cf29e669085d522
