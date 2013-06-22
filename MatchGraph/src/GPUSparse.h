@@ -9,31 +9,54 @@
 #define GPUSPARSE_H_
 
 #include "MatrixHandler.h"
-#include <boost/dynamic_bitset.hpp>
+#include <set>
+#include <map>
+
+typedef std::map<int,std::set<int> > myElemMap;
 
 class GPUSparse : public MatrixHandler{
 private:
-	unsigned int dim;
-	unsigned long N;
-	float lambda;
-	unsigned long num_set;
-	char* data; // upper half of T matrix (without diagonal)
-				// has dim(dim-1) / 2 elements
+	const unsigned int dim;
+	const float lambda;
+	unsigned int num_similar; //# of similarities that is (number of 1s / 2)
+	unsigned int num_dissimilar; //# of dissimilarities that is (number of -1s / 2)
+
+	int* colIdx;
+	int* rowPtr;
+	int* degrees;
+	int* diagPos; //position of diagonal elements within row
+
+	myElemMap newElemMap;
+	int numNewSimilar;
+	int numNewDiagonal;
+	
+	myElemMap dissimilarMap;
+
+	void addNewToRow(const int row, const int j);
+	void addDissimilarToColumn(const int column, const int row);
+	void incrementDegree(const int row);
+	void initFirst();
 
 public:
 	GPUSparse();
 	GPUSparse(unsigned int _dim, float _lambda);
+	void updateSparseStatus(); //TODO later private?
+
 	//~GPUMatrix();
 	void set(int i, int j, bool val);
-	void set(int idx, bool val);
 	unsigned int getDimension();
 	float* getConfMatrixF();
 	char* getMatrAsArray();
 	char getVal(int i, int j);
-	float* getColumn(int i);
 	int getSimilarities();
 	void print();
 	void writeGML(char* filename, bool similar, bool dissimilar, bool potential);
+
+	/* SPARSE-specific */
+	float* getValueArr() const;
+	float* getColumn(int i) const;
+	int* getColIdx() const;
+	int* getRowPtr() const;
 };
 
 #endif /* GPUSPARSE_H_ */
