@@ -43,10 +43,12 @@ static __global__ void initKernel(long* gpuIndices, float* x, const float* b, co
 
 	if (idx < dim)
 	{
-		if (columnIdx == idx || 0 != b[idx]) //diagonal element or known element //|| 0 != b[idx]
+		if (columnIdx >= idx || 0 != b[idx])
 		{
+			//diagonal element or known element or upper diagonal matrix element
+
 			gpuIndices[idx] = -1;
-			//assign very low value to elements already known
+			//assign very low value to avoid them getting chosen
 			x[idx] = -FLT_MAX;
 		}
 		else
@@ -91,8 +93,7 @@ Indices* CMEstimatorGPUColumn::getInitializationIndices(MatrixHandler* T, int in
 					|| (T->getVal(x,y) != 0)
 					|| (std::find(chosenOnes.begin(), chosenOnes.end(), rIdx) != chosenOnes.end()))
 				&& (c <= MAX_ITERATIONS) );
-		/* :TRICKY:
-		 * As long as the random number is not within the upper diagonal matrix w/o diagonal elements
+		/* As long as the random number is not within the upper diagonal matrix w/o diagonal elements
 		 * or T(idx) != 0 generate or already in the list of Indices, a new random index but maximal
 		 * MAX_ITERAtION times.
 		 */
@@ -128,10 +129,12 @@ Indices* CMEstimatorGPUColumn::getKBestConfMeasures(float* xColumnDevice, float*
 	dim3 threadBlock(THREADS);
 	dim3 blockGrid(numBlocks);
 
-	//Init indices array such that indices = [-1,1,2,-1,...,dim-1], whereas the respective
-	//diagonal element is -1 as well as elements that are already compared.
-	//For already known elements (i.e. bColumnDevice[i] != 0), xColumnDevice[i] will be
-	//assigned a very low value to prevent them from getting chosen later.
+	/* Init indices array such that indices = [-1,1,2,-1,...,dim-1], whereas the respective
+	 * diagonal element is -1 as well as elements that are already compared or within the upper
+	 * diagonal matrix.
+	 * For already known elements (i.e. bColumnDevice[i] != 0), xColumnDevice[i] will be
+	 * assigned a very low value to prevent them from getting chosen later.
+	 */
 	initKernel<<<blockGrid, threadBlock>>>(gpuIndices, xColumnDevice, bColumnDevice, dim, columnIdx);
 	CUDA_CHECK_ERROR();
 
