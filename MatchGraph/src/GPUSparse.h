@@ -35,7 +35,6 @@ private:
 	void addNewToRow(const int row, const int j);
 	void addDissimilarToColumn(const int column, const int row);
 	void incrementDegree(const int row);
-	void initFirst();
 
 public:
 	GPUSparse();
@@ -53,7 +52,7 @@ public:
 	void writeGML(char* filename, bool similar, bool dissimilar, bool potential);
 
 	/* SPARSE-specific */
-	float* getValueArr(bool, float*, int*, int*) const;
+	float* getValueArr(bool gpuPointer, float* values, int* rowPtr, int* colIdx) const;
 	float* getColumn(int i) const;
 	int* getColIdx() const;
 	int* getRowPtr() const;

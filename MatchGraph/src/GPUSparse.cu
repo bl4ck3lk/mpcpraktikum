@@ -158,34 +158,22 @@ GPUSparse::GPUSparse(unsigned int _dim, float _lambda) :
 	}
 }
 
-void GPUSparse::initFirst()
-{
-	//we have n new entries with value 1 -> n/2 similarities
-	num_similar = numNewSimilar / 2;
-
-	//settin put column index array
-	colIdx = (int*) malloc((dim + num_similar * 2) * sizeof(int));
-}
-
 void GPUSparse::updateSparseStatus()
 {
-	//printf("val array before update:");
-	//getValueArr();
-
+	int old_nnz = getNNZ();
 	printf("new similar: %i , new diagonal %i \n", numNewSimilar, numNewDiagonal);
 
+	//we have n new entries with value 1 -> n/2 similarities
+	num_similar += (numNewSimilar / 2); //update number
+
 	bool firstInit = (colIdx == NULL);
-	if (numNewSimilar != 0 && firstInit)
-	{ //first initialization
-		initFirst();
-	}
+//	if (numNewSimilar != 0 && firstInit)
+//	{ //first initialization
+//		//setting column index array
+//		//colIdx = (int*) malloc((dim + num_similar * 2) * sizeof(int));
+//	}
 
 	int numNew = numNewSimilar + numNewDiagonal;
-
-	int nnz = num_similar * 2 + dim;
-
-	std::cout << "new Elements: " << numNew << std::endl;
-
 
 	int* newElemArr = (int*) malloc(numNew * sizeof(int));
 	int* rowPtrIncr = (int*) malloc((dim + 1) * sizeof(int));
@@ -203,7 +191,9 @@ void GPUSparse::updateSparseStatus()
 			c++;
 			rowPtrIncr[(it->first) + 1]++;
 		}
+		list.clear();
 	}
+	newElemMap.clear();
 
 	printf("new Elements are:  ");
 	Tester::printArrayInt(newElemArr, numNew);
@@ -212,7 +202,7 @@ void GPUSparse::updateSparseStatus()
 
 	if (firstInit)
 	{
-		//column index are just all new elements...
+		//column index array is just all new elements...
 		colIdx = newElemArr;
 
 		GPUSparse::prefixSumGPU(rowPtr, rowPtrIncr, dim+1);
@@ -221,23 +211,18 @@ void GPUSparse::updateSparseStatus()
 		Tester::printArrayInt(rowPtr, dim + 1);
 	}
 
-	Tester::printArrayInt(degrees, dim);
-	Tester::printArrayInt(diagPos, dim);
-	printf("num similar %d \n", num_similar);
-	getValueArr(false, NULL, NULL, NULL);
+	else{
+		printf("## Normal update\n Old colIdx: ");
+		Tester::printArrayInt(colIdx, old_nnz);
 
-	printf("column B \n");
-	Tester::printArrayFloat(getColumn(3),dim);
-
-	if(!firstInit){
 		int* rowPtrPrefixSum = (int*) malloc((dim+1)*sizeof(int));
-		GPUSparse::prefixSumGPU(rowPtrPrefixSum, rowPtr, dim+1);
-		printf("prefixSum: ");
+		GPUSparse::prefixSumGPU(rowPtrPrefixSum, rowPtrIncr, dim+1);
+		printf("prefixSum of RowPointer: ");
 		Tester::printArrayInt(rowPtrPrefixSum, dim + 1);
 
 		//build new larger column index array
-		int* colIdxNew = (int*) malloc((nnz + numNew) * sizeof(int));
-		std::fill_n(colIdxNew, nnz + numNew, -1);
+		int* colIdxNew = (int*) malloc((old_nnz + numNew) * sizeof(int));
+		std::fill_n(colIdxNew, old_nnz + numNew, -1);
 
 		//scatter new elements
 		for (int i = 0; i < dim; ++i)
@@ -264,22 +249,38 @@ void GPUSparse::updateSparseStatus()
 				colIdxNew[s + rowPtrPrefixSum[i]] = colIdx[s];
 			}
 		}
-		Tester::printArrayInt(colIdxNew, nnz + numNew);
 
+
+
+		//TODO:
 		/* compute the updated row pointer now */
 		int newRowPtr[] =
 		{ 0, 3, 6, 10, 12, 15 };
+
+
+
+
 		free(rowPtr);
 		free(colIdx);
+		free(newElemArr);
 
 		rowPtr = newRowPtr;
 		colIdx = colIdxNew;
 	}
 
-	free(rowPtrIncr);
-	free(newElemArr);
+	/********* TESTING ****************/
+	Tester::printArrayInt(degrees, dim);
+	Tester::printArrayInt(diagPos, dim);
+	printf("num similar %d \n", num_similar);
+	printf("colIdx after update: ");
+	Tester::printArrayInt(colIdx, getNNZ());
+	getValueArr(false, NULL, NULL, NULL);
+//	printf("column B \n");
+//	Tester::printArrayFloat(getColumn(3),dim);
+	/**********************************/
 
-	num_similar += numNewSimilar; //update number
+//	free(rowPtrIncr);
+
 	numNewSimilar = 0; //reset
 	numNewDiagonal = 0; //reset
 }
@@ -377,15 +378,16 @@ float* GPUSparse::getValueArr(bool gpuPointer, float* _gpuVals, int* _gpuRowPtr,
 	dim3 blockGrid(NUM_BLOCKS);
 	dim3 threadBlock(MAX_THREADS);
 
-	int nnz = num_similar * 2 + dim;
+	int nnz = getNNZ();
 
 	float _cpuLambda_times_dim = dim * lambda; //FIXME do not compute each time
 	cudaMemcpyToSymbol(lambda_times_dim, &_cpuLambda_times_dim, sizeof(float));
 
 	float* gpuValues;
 	cudaMalloc((void**) &gpuValues, nnz * sizeof(float));
-
 	scatterKernel<<<blockGrid, threadBlock>>>(gpuValues, nnz);
+
+
 	int* gpuDegrees;
 	cudaMalloc((void**) &gpuDegrees, dim * sizeof(int));
 	cudaMemcpy(gpuDegrees, degrees, dim * sizeof(int), cudaMemcpyHostToDevice);
@@ -396,15 +398,20 @@ float* GPUSparse::getValueArr(bool gpuPointer, float* _gpuVals, int* _gpuRowPtr,
 	int* gpuDiagPos;
 	cudaMalloc((void**) &gpuDiagPos, dim * sizeof(int));
 	cudaMemcpy(gpuDiagPos, diagPos, dim * sizeof(int), cudaMemcpyHostToDevice);
+
 	scatterDiagonalKernel<<<blockGrid, threadBlock>>>(gpuValues, gpuRowPtr,
 			gpuDegrees, gpuDiagPos, dim);
 
+	cudaFree(gpuDiagPos);
+	cudaFree(gpuDegrees);
 
 	if(!gpuPointer){
 		float* valuesCPU = (float*) malloc(nnz * sizeof(float));
 		cudaMemcpy(valuesCPU, gpuValues, nnz * sizeof(float),
 				cudaMemcpyDeviceToHost);
 
+		cudaFree(gpuValues);
+		cudaFree(gpuRowPtr);
 
 		printf("value array: ");
 		Tester::printArrayFloat(valuesCPU, nnz);
