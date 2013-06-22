@@ -165,8 +165,6 @@ void GPUSparse::initFirst()
 
 	//settin put column index array
 	colIdx = (int*) malloc((dim + num_similar * 2) * sizeof(int));
-
-	//TODO degrees initialization
 }
 
 void GPUSparse::updateSparseStatus()
@@ -188,61 +186,36 @@ void GPUSparse::updateSparseStatus()
 
 	std::cout << "new Elements: " << numNew << std::endl;
 
+
+	int* newElemArr = (int*) malloc(numNew * sizeof(int));
 	int* rowPtrIncr = (int*) malloc((dim + 1) * sizeof(int));
 	std::fill_n(rowPtrIncr, dim + 1, 0);
 
-	int* ne = (int*) malloc(numNew * sizeof(int));
 	int c = 0;
 	for (myElemMap::iterator it = newElemMap.begin(); it != newElemMap.end();
 			++it)
 	{
-//		std::cout << "START of FOR" << std::endl;
 		std::set<int> list = it->second;
-//		std::cout << it->first << " with size " << list.size() << std::endl;
 		for (std::set<int>::const_iterator lIter = list.begin();
 				lIter != list.end(); ++lIter)
 		{
-//		  std::cout << "\t {" << it->second.size() << std::endl;
-			ne[c] = (*lIter);
+			newElemArr[c] = (*lIter);
 			c++;
 			rowPtrIncr[(it->first) + 1]++;
-//		  std::cout << "\t\t }" << it->second.size() << std::endl;
 		}
 	}
-//	std::cout << "END of FOR" << std::endl;
 
 	printf("new Elements are:  ");
-	Tester::printArrayInt(ne, numNew);
+	Tester::printArrayInt(newElemArr, numNew);
 	printf("rowPointerIncrement: ");
 	Tester::printArrayInt(rowPtrIncr, dim + 1);
 
-	const int MAX_THREADS = 128;
-	const int NUM_BLOCKS = 256;
-	dim3 blockGrid(NUM_BLOCKS);
-	dim3 threadBlock(MAX_THREADS);
 	if (firstInit)
 	{
 		//column index are just all new elements...
-		colIdx = ne;
+		colIdx = newElemArr;
 
-		int* _gpuRowPtrIncr;
-		cudaMalloc((void**) &_gpuRowPtrIncr, (dim + 1) * sizeof(int));
-		cudaMemcpy(_gpuRowPtrIncr, rowPtrIncr, (dim + 1) * sizeof(int),
-				cudaMemcpyHostToDevice);
-
-		int* _gpuSumOfBlocks;
-		cudaMalloc((void**) &_gpuSumOfBlocks, NUM_BLOCKS * sizeof(int));
-
-		prefixSumKernel<<<blockGrid, threadBlock>>>(_gpuRowPtrIncr,
-				_gpuSumOfBlocks, dim + 1, 1);
-
-		prefixSumKernel<<<1, threadBlock>>>(_gpuSumOfBlocks, _gpuSumOfBlocks,
-				NUM_BLOCKS, 0);
-
-		addKernel<<<blockGrid, threadBlock>>>(_gpuRowPtrIncr, _gpuSumOfBlocks);
-
-		cudaMemcpy(rowPtr, _gpuRowPtrIncr, (dim + 1) * sizeof(int),
-				cudaMemcpyDeviceToHost);
+		GPUSparse::prefixSumGPU(rowPtr, rowPtrIncr, dim+1);
 
 		printf("initialized rowPtr: ");
 		Tester::printArrayInt(rowPtr, dim + 1);
@@ -251,13 +224,14 @@ void GPUSparse::updateSparseStatus()
 	Tester::printArrayInt(degrees, dim);
 	Tester::printArrayInt(diagPos, dim);
 	printf("num similar %d \n", num_similar);
-	getValueArr();
+	getValueArr(false, NULL, NULL, NULL);
 
 	printf("column B \n");
 	Tester::printArrayFloat(getColumn(3),dim);
 
 	if(!firstInit){
-		int rowPtrPrefixSum[] = { 0, 1, 2, 3, 3, 4 };
+		int* rowPtrPrefixSum = (int*) malloc((dim+1)*sizeof(int));
+		GPUSparse::prefixSumGPU(rowPtrPrefixSum, rowPtr, dim+1);
 		printf("prefixSum: ");
 		Tester::printArrayInt(rowPtrPrefixSum, dim + 1);
 
@@ -275,7 +249,7 @@ void GPUSparse::updateSparseStatus()
 				for (int s = rowPtrPrefixSum[i]; s < rowPtrPrefixSum[i + 1];
 						++s, ++thisBucket)
 				{
-					colIdxNew[rowPtr[(i + 1)] + s] = ne[s];
+					colIdxNew[rowPtr[(i + 1)] + s] = newElemArr[s];
 					//printf(" %i goes to %i \n", ne[s], rowPtr[(i+1)]+s);
 				}
 			}
@@ -301,6 +275,9 @@ void GPUSparse::updateSparseStatus()
 		rowPtr = newRowPtr;
 		colIdx = colIdxNew;
 	}
+
+	free(rowPtrIncr);
+	free(newElemArr);
 
 	num_similar += numNewSimilar; //update number
 	numNewSimilar = 0; //reset
@@ -393,7 +370,7 @@ float* GPUSparse::getConfMatrixF()
 	return NULL;
 }
 
-float* GPUSparse::getValueArr() const
+float* GPUSparse::getValueArr(bool gpuPointer, float* _gpuVals, int* _gpuRowPtr, int* _gpuColIdx) const
 {
 	const int MAX_THREADS = 128;
 	const int NUM_BLOCKS = 256;
@@ -422,13 +399,25 @@ float* GPUSparse::getValueArr() const
 	scatterDiagonalKernel<<<blockGrid, threadBlock>>>(gpuValues, gpuRowPtr,
 			gpuDegrees, gpuDiagPos, dim);
 
-	float* valuesCPU = (float*) malloc(nnz * sizeof(float));
-	cudaMemcpy(valuesCPU, gpuValues, nnz * sizeof(float),
-			cudaMemcpyDeviceToHost);
 
-	printf("value array: ");
-	Tester::printArrayFloat(valuesCPU, nnz);
-	return valuesCPU;
+	if(!gpuPointer){
+		float* valuesCPU = (float*) malloc(nnz * sizeof(float));
+		cudaMemcpy(valuesCPU, gpuValues, nnz * sizeof(float),
+				cudaMemcpyDeviceToHost);
+
+
+		printf("value array: ");
+		Tester::printArrayFloat(valuesCPU, nnz);
+
+		return valuesCPU;
+	}
+
+	_gpuRowPtr = gpuRowPtr;
+	_gpuVals = gpuValues;
+
+	_gpuColIdx = NULL; //TODO?
+
+	return NULL;
 }
 
 float* GPUSparse::getColumn(int columnIdx) const
@@ -494,4 +483,39 @@ int* GPUSparse::getRowPtr() const
 int* GPUSparse::getColIdx() const
 {
 	return colIdx;
+}
+
+unsigned int GPUSparse::getNNZ() const
+{
+	return num_similar * 2 + dim;
+}
+
+void GPUSparse::prefixSumGPU(int* result, const int* array, const int dimension)
+{
+	const int MAX_THREADS = 128;
+	const int NUM_BLOCKS = 256;
+	dim3 blockGrid(NUM_BLOCKS);
+	dim3 threadBlock(MAX_THREADS);
+
+	int* _gpuArrayData;
+	cudaMalloc((void**) &_gpuArrayData, (dimension) * sizeof(int));
+	cudaMemcpy(_gpuArrayData, array, (dimension) * sizeof(int),
+			cudaMemcpyHostToDevice);
+
+	int* _gpuSumOfBlocks;
+	cudaMalloc((void**) &_gpuSumOfBlocks, NUM_BLOCKS * sizeof(int));
+
+	prefixSumKernel<<<blockGrid, threadBlock>>>(_gpuArrayData, _gpuSumOfBlocks,
+			dimension, 1);
+
+	prefixSumKernel<<<1, threadBlock>>>(_gpuSumOfBlocks, _gpuSumOfBlocks,
+			NUM_BLOCKS, 0);
+
+	addKernel<<<blockGrid, threadBlock>>>(_gpuArrayData, _gpuSumOfBlocks);
+
+	cudaMemcpy(result, _gpuArrayData, dimension * sizeof(int),
+			cudaMemcpyDeviceToHost);
+
+	cudaFree(_gpuArrayData);
+	cudaFree(_gpuSumOfBlocks);
 }

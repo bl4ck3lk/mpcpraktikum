@@ -53,10 +53,13 @@ public:
 	void writeGML(char* filename, bool similar, bool dissimilar, bool potential);
 
 	/* SPARSE-specific */
-	float* getValueArr() const;
+	float* getValueArr(bool, float*, int*, int*) const;
 	float* getColumn(int i) const;
 	int* getColIdx() const;
 	int* getRowPtr() const;
+	unsigned int getNNZ() const;
+
+	static void prefixSumGPU(int* result, const int* array, const int dimension);
 };
 
 #endif /* GPUSPARSE_H_ */
