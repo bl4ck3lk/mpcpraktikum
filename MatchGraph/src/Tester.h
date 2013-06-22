@@ -20,6 +20,8 @@ public:
 	static void printMatrixArrayChar(char* arr, int dim);
 
 	static void printArrayFloat(float* arr, int n);
+
+	static void printArrayLong(long* arr, int n);
 };
 
 #endif /* TESTER_H_ */

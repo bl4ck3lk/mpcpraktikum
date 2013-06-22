@@ -126,3 +126,16 @@ void Tester::printArrayFloat(float* arr, int n)
 	}
 	printf("]\n");
 }
+
+void Tester::printArrayLong(long* arr, int n)
+{
+	printf("[");
+	for (int i = 0; i < n; i++)
+	{
+		if(i == n-1)
+			printf(" %ld ", arr[i]);
+		else
+			printf(" %ld, ", arr[i]);
+	}
+	printf("]\n");
+}
