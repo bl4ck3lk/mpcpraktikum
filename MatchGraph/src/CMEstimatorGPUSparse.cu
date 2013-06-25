@@ -45,10 +45,8 @@ static __global__ void initKernel(long* gpuIndices, float* x, const float* b, co
 
 	if (idx < dim)
 	{
-		if (columnIdx >= idx || 0 != b[idx])
+		if (columnIdx >= idx || 0 != b[idx]) //diagonal element or known element or upper diagonal matrix element
 		{
-			//diagonal element or known element or upper diagonal matrix element
-
 			gpuIndices[idx] = -1;
 			//assign very low value to avoid them getting chosen
 			x[idx] = -FLT_MAX;
@@ -62,8 +60,6 @@ static __global__ void initKernel(long* gpuIndices, float* x, const float* b, co
 }
 
 CMEstimatorGPUSparse::CMEstimatorGPUSparse() {
-	// TODO Auto-generated constructor stub
-
 }
 
 Indices* CMEstimatorGPUSparse::getInitializationIndices(MatrixHandler* T, int initNr)
@@ -220,19 +216,41 @@ Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, 
 	cudaMemcpy(d_rowPtr, rowPtr, (dim+1) * sizeof(int), cudaMemcpyHostToDevice);
 	// END *************************************************
 
-	int xBestPerColumn = (dim/kBest > 0) ? dim/kBest : 1; //TODO optimize this
-	Indices* tmpIndices = new Indices[xBestPerColumn];
-	for(int i = 0; i < dim; i++)
+	//Set up cula
+	culaSparseHandle handle;
+	culaSparsePlan plan;
+	culaSparseConfig config;
+
+	config.relativeTolerance = 1e-6;
+	config.maxIterations = 300;
+	config.maxRuntime = 10;
+
+	culaSparseCreate(&handle); //create library handle
+	culaSparseConfigInit(handle, &config); //initialize values
+	culaSparseCreatePlan(handle, &plan); //create execution plan
+	culaSparseSetCudaDevicePlatform(handle, plan, 0); //use the CUDA-device platform (interprets given pointer as device pointers)
+	culaSparseSetCgSolver(handle, plan, 0); //associate CG solver with the plan
+	culaSparseSetJacobiPreconditioner(handle, plan, 0); //associate jacobi preconditioner with the plan
+
+	int determinedIndicesByNow = 0;
+	for(int i = 0; i < dim && countIndices < kBest; i++) //if enough values are gathered, stop computation
 	{
+		//0. determine number of best values for this column
+		//The bigger i, the less best indices are determined for this column
+		int xBestForThisColumn = ((dim-i)/(0.5*dim*(dim-1))) * kBest;
+		//take into account that probably not as many indices as needed can be determined, so try o get them in the next column
+		int determineXforThisColumn = xBestForThisColumn + (determinedIndicesByNow - countIndices);
+		Indices* tmpIndices = new Indices[determineXforThisColumn];
+
 		//1. Compute confidence measure for this column (solve Ax=b)
 		cudaMemcpy(d_b, T_sparse->getColumn(i), dim * sizeof(float), cudaMemcpyHostToDevice);
-		computeConfidenceMeasure(dim, nnz, d_values, d_rowPtr, d_colIdx, d_x, d_b);
+		computeConfidenceMeasure(handle, plan, config, dim, nnz, d_values, d_rowPtr, d_colIdx, d_x, d_b);
 
 		//2. get indices of x best confidence measure values
-		tmpIndices = getKBestConfMeasures(d_x, d_b, i, dim, xBestPerColumn);
+		tmpIndices = getKBestConfMeasures(d_x, d_b, i, dim, determineXforThisColumn);
 
 		//3. gather indices
-		for(int j = 0; j < xBestPerColumn; j++)
+		for(int j = 0; j < determineXforThisColumn && countIndices < kBest; j++)
 		{
 			if (-1 == tmpIndices[j].i)
 			{
@@ -244,11 +262,17 @@ Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, 
 				countIndices++;
 			}
 		}
+
+		determinedIndicesByNow += xBestForThisColumn; // #indices that should have been determined
+
+		printf("Column %i, try to determine %i best values. Actually determined by now %i values\n", i, determineXforThisColumn, countIndices);
 	}
 
 	//clean up the mess
 	cudaFree(d_x);
 	cudaFree(d_b);
+	culaSparseDestroyPlan(plan);
+	culaSparseDestroy(handle);
 
 	//print
 	if (true)
@@ -268,43 +292,20 @@ Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, 
 }
 
 //handles only device pointer.
-void CMEstimatorGPUSparse::computeConfidenceMeasure(unsigned int dim, unsigned int nnz, float* A, int* rowPtr, int* colIdx, float* x, float* b)
+void CMEstimatorGPUSparse::computeConfidenceMeasure(culaSparseHandle handle, culaSparsePlan plan, culaSparseConfig config,
+															unsigned int dim, unsigned int nnz, float* A, int* rowPtr, int* colIdx, float* x, float* b)
 {
-	// create library handle
-	culaSparseHandle handle;
-	culaSparseCreate(&handle);
-
 	// information returned by the solver
 	culaSparseResult result;
 
-	// create execution plan
-	culaSparsePlan plan;
-
-	// create configuration structure
-	culaSparseConfig config;
-	// initialize values
-	culaSparseConfigInit(handle, &config);
-	// configure specific parameters
-	config.relativeTolerance = 1e-6;
-	config.maxIterations = 300;
-	config.maxRuntime = 10;
-
-	culaSparseCreatePlan(handle, &plan);
-	// use the CUDA-device platform (interprets given pointer as device pointers)
-	culaSparseSetCudaDevicePlatform(handle, plan, 0);
 	// associate coo data with the plan
 	culaSparseSetScsrData(handle, plan, 0, dim, nnz, A, rowPtr, colIdx, x, b);
-	// associate CG solver with the plan
-	culaSparseSetCgSolver(handle, plan, 0);
-	//culaSparseSetBicgSolver(handle, plan, 0);
-	// associate jacobi preconditioner with the plan
-	culaSparseSetJacobiPreconditioner(handle, plan, 0);
-	//culaSparseSetBlockJacobiPreconditioner(handle, plan, 0);
+
 	// execute plan
 	culaSparseStatus status = culaSparseExecutePlan(handle, plan, &config, &result);
 
 	//print if error
-	if (culaSparseNoError != status)
+	if (culaSparseNoError != status || false)
 	{
 		char buffer[512];
 		culaSparseGetResultString(handle, &result, buffer, 512);
@@ -316,14 +317,12 @@ void CMEstimatorGPUSparse::computeConfidenceMeasure(unsigned int dim, unsigned i
 	{
 		float* h_x = new float[dim];
 		cudaMemcpy(h_x, x, dim * sizeof(float), cudaMemcpyDeviceToHost);
+		printf("[");
 		for (int i = 0; i < dim; i++)
 		{
-			printf("%f\n", h_x[i]);
+			printf(" %f ", h_x[i]);
 		}
+		printf("]\n");
 	}
-
-	// cleanup
-	culaSparseDestroyPlan(plan);
-	culaSparseDestroy(handle);
 }
 

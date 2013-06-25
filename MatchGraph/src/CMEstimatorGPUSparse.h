@@ -9,6 +9,7 @@
 #define CMESTIMATORGPUSPARSE_H_
 
 #include "CMEstimator.h"
+#include <cula_sparse.h>
 
 class CMEstimatorGPUSparse : public CMEstimator{
 public:
@@ -20,7 +21,7 @@ public:
 
 private:
 	Indices* getKBestConfMeasures(float* xColumnDevice, float* bColumnDevice, int columnIdx, int dim, int kBest);
-	void computeConfidenceMeasure(unsigned int dim, unsigned int nnz, float* A, int* rowPtr, int* colIdx, float* x, float* b);
+	void computeConfidenceMeasure(culaSparseHandle handle, culaSparsePlan plan, culaSparseConfig config, unsigned int dim, unsigned int nnz, float* A, int* rowPtr, int* colIdx, float* x, float* b);
 };
 
 #endif /* CMESTIMATORGPUSPARSE_H_ */
