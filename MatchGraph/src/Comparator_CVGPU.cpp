@@ -64,7 +64,7 @@ int ComparatorCVGPU::compareGPU(const char* img1, const char* img2, bool showMat
 	symmetryTest(matches1,matches2,symMatches);
 
 	std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
-	if (symMatches.size() < 10) return -1;
+	if (symMatches.size() < 1) return -1;
 		
 	surf.downloadKeypoints(im1_keypoints_gpu, im1_keypoints);
 	surf.downloadKeypoints(im2_keypoints_gpu, im2_keypoints);
@@ -79,10 +79,10 @@ int ComparatorCVGPU::compareGPU(const char* img1, const char* img2, bool showMat
 	//if (symMatches.size() < thresholdMatchPoints) return -1;
 
 	//TODO: not quite correct. It should be normalized by descriptors size.
-	float k = (2 * symMatches.size()) / float(matches1.size() + matches2.size());
+	float k = (2 * symMatches.size()) / float(im1_keypoints.size() + im2_keypoints.size());
 	cout << "k(I_i, I_j) = " << k << endl;
 	
-	if (k < 0.01) return -1;
+	if (k < 0.02) return -1;
 	
 	if (showMatches) 
 	{	
