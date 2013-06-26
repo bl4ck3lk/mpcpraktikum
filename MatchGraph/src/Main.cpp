@@ -12,29 +12,31 @@
 #include "CMEstimatorCPU.h"
 #include "CMEstimatorGPUSorted.h"
 #include "CMEstimatorGPUApprox.h"
+#include "CMEstimatorGPUSparse.h"
 #include "ImageHandler.h"
 #include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
-#include <cula.h>
 
 #define TESTMATRIX 0 //to enable test matrix, one has to set the test bool in T->init to true
 
 int main(int argc, char** argv)
 {
-	const char* dir = "../resource/notre_dame_40"; //TODO use input-parameter
+	//const char* dir = "../resource/notre_dame_40"; //TODO use input-parameter
+	const char* dir = "/graphics/projects/data/photoDB_fromWWW/photoCollections/Flickr/P/paris";
 
 	////////////////////////
 	//computation handlers//
 	////////////////////////
 	MatrixHandler* T;
-	CMEstimator* CME = new CMEstimatorCPU();
-    	//CMEstimator* CME = new CMEstimatorGPUSorted();
-    	//CMEstimator* CME = new CMEstimatorGPUApprox();
+	//CMEstimator* CME = new CMEstimatorCPU();
+    //CMEstimator* CME = new CMEstimatorGPUSorted();
+	CMEstimator* CME = new CMEstimatorGPUApprox();
+	//CMEstimator* CME = new CMEstimatorGPUSparse();
 	ImageComparator* comparator = new CPUComparator();
 	ImageHandler* iHandler = new ImageHandler(dir);
 
-	//iHandler->fillWithEmptyImages(10);
+	//iHandler->fillWithEmptyImages(5);
 
 	printf("Directory %s with %i files initialized.\n", dir, iHandler->getTotalNr());
 
@@ -46,12 +48,12 @@ int main(int argc, char** argv)
 	dim	 		= 10;
 #endif
 
-	const int MAX_INIT_ITERATIONS 	= (dim*(dim-1))/2; //#elements in upper diagonal matrix
+	const int MAX_INIT_ITERATIONS 	= dim;//(dim*(dim-1))/2; //#elements in upper diagonal matrix
 	const int MIN_INIT_SIMILARITIES = 2*dim;
-	int sizeOfInitIndicesList 		= 3;
+	int sizeOfInitIndicesList 		= 50;
 
 	float lambda 	= 1.0;
-	int iterations 	= 5;
+	int iterations 	= 4;
 	int kBest 		= sizeOfInitIndicesList;
 
 	/////////////////////////////////////////////////////////
@@ -64,9 +66,29 @@ int main(int argc, char** argv)
 			////////////////////
 			//Initialize Phase//
 			////////////////////
+
+			/*
+			T = new GPUSparse(dim, lambda); //empty Matrix (test = false)
+			T->set(0,1, true);
+			T->set(2,3, true);
+			T->set(2,4, true);
+
+			T->set(0,3, false);
+			//T->set(2,4, false);
+
+			dynamic_cast<GPUSparse*> ( T )->updateSparseStatus();
+
+
+			//Test cula & kbest indices
+			kBest = 3;
+			Indices* bestIndices = CME->getKBestConfMeasures(T, NULL, kBest);
+
+			exit (EXIT_FAILURE);
+			*/
+
 			T = new CPUImpl(dim, lambda); //empty Matrix (test = false)
-			std::cout << "Init T:\n"<< std::endl;
-			T->print();
+			//std::cout << "Init T:\n"<< std::endl;
+			//T->print();
 
 #if !TESTMATRIX
 			int c = 0;
@@ -88,7 +110,7 @@ int main(int argc, char** argv)
 			else printf("Maximum initialization iterations reached w/o enough similarities.\n");
 #endif
 			printf("Initialization complete. T:\n");
-			T->print();
+			//T->print();
 		}
 
 		/////////////////////////
@@ -98,16 +120,18 @@ int main(int argc, char** argv)
 		//compute confidence measure matrix
 		float* f = T->getConfMatrixF();
 
-		//return 1;
-
 		//determine the k-best values in confidence measure matrix
 		Indices* bestIndices = CME->getKBestConfMeasures(T, f, kBest);
 
 		//compare k-best image pairs and update T-matrix respectively
 	    comparator->doComparison(iHandler, T, kBest, bestIndices);
 
-		std::cout << "T_" << i << ":\n" << std::endl;
-		T->print();
+		//std::cout << "T_" << i << ":\n" << std::endl;
+		//T->print();
 	}
+
+	std::cout << "Resulting Matrix:\n" << std::endl;
+	T->print();
+
 	return 0;
 }

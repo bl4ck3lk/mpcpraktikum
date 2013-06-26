@@ -7,6 +7,7 @@
 
 #include "CPUComparator.h"
 //#include "Comparator.h"
+#include "Comparator_CVGPU.h"
 #include <stdio.h> //printf
 
 CPUComparator::CPUComparator()
@@ -23,6 +24,8 @@ void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int k
 	 * (just like this CPUComparator)
 	 */
 
+	ComparatorCVGPU* comparator = new ComparatorCVGPU();
+
 	for(int i = 0; i < kBest; i++)
 	{
 		//if(doComparisonOfImages(image[index1[i]] , image[index2[i]]) TELLS Similar)
@@ -34,11 +37,13 @@ void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int k
 
 		if (x != -1)
 		{
-			printf("[CPUComparator]: Comparing image %i: %s with image %i: %s\n", x, iHandler->getFullImagePath(x), y, iHandler->getFullImagePath(y));
+			printf("[CPUComparator]: Comparing image %i: %s with image %i: %s.\n", x, iHandler->getFullImagePath(x), y, iHandler->getFullImagePath(y));
+			int resultCompare = comparator->compareGPU(iHandler->getFullImagePath(x), iHandler->getFullImagePath(y), true, true);
+			bool result = (resultCompare == 1) ? true : false;
+			printf(" Result: %i\n", result);
 
-
-			T->set(x, y, true);
-			T->set(y, x, true); //set T symmetrically
+			T->set(x, y, result);
+			T->set(y, x, result); //set T symmetrically
 		}
 	}
 
