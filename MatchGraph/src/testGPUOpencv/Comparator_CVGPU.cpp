@@ -10,6 +10,7 @@
 #include <opencv2/calib3d/calib3d.hpp> // for homography
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
+#include <opencv2/nonfree/gpu.hpp>
 #include "Comparator_CVGPU.h"
 
 #include <vector>
@@ -30,6 +31,7 @@ void ratio_aux(const int2 * trainIdx1, int2 * trainIdx2,
 // match a desired pair using the match2 function
 int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool drawEpipolar)
 {
+	// TODO: images should be passed as an array of images pairs.
 	cv::Mat im1 = imread( img1, 0 );
 	cv::Mat im2 = imread( img2, 0 );
 
@@ -41,27 +43,67 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
 	//imshow("i1",im1);
 	//imshow("i2",im2);
 
+	// for each image pair in input array do:
 	if( !im1.data || !im2.data )
 	{ std::cout<< " --(!) Error reading images " << std::endl; return -1; }
 
+	// use new ...
 	cv::gpu::GpuMat im1_gpu, im2_gpu;
 	cv::gpu::GpuMat im1_keypoints_gpu, im1_descriptors_gpu;
 	cv::gpu::GpuMat im2_keypoints_gpu, im2_descriptors_gpu;
+
+	std::vector<std::vector < cv::gpu::GpuMat*> > pairs;
+	std::vector < cv::gpu::GpuMat*> tmp;
+	
+	tmp.push_back(&im1_gpu);
+	tmp.push_back(&im2_gpu);
+	tmp.push_back(&im1_keypoints_gpu);
+	tmp.push_back(&im2_keypoints_gpu);
+
+	tmp.push_back(&im1_descriptors_gpu);
+	tmp.push_back(&im2_descriptors_gpu);
+
+	pairs.push_back(tmp);
 	SURF_GPU surf;
  
 	std::vector<cv::KeyPoint> im1_keypoints, im2_keypoints;
 	std::vector<float> im1_descriptors, im2_descriptors;
- 
+ 	// end for
+
+	// upload all the necessary data for each comp-pair
+	for (std::vector<std::vector < cv::gpu::GpuMat*> >::iterator it = pairs.begin();
+it != pairs.end(); ++it) {
+		//it[0] - im1
+		//it[1] - im2
+		(*it)[0]->upload(im1); 
+		(*it)[1]->upload(im2);
+		// im1 and im2 above should come from another vector/array with
+		// correspondent indices
+		// upload should be done only if not done yet!
+		// once done, save this information!
+
+
+		// detect keypoints & compute descriptors
+		surf(*(*it)[0], cv::gpu::GpuMat(), *(*it)[2], *(*it)[4], false);
+		surf(*(*it)[1], cv::gpu::GpuMat(), *(*it)[3], *(*it)[5], false);
+		// release im1 and im2	
+	}
 	// upload images into the GPU
-	im1_gpu.upload(im1);
-	im2_gpu.upload(im2);
- 
+	//im1_gpu.upload(im1);
+	//im2_gpu.upload(im2);
+	/*	
+	if (!showMatches) // free memory we won't use again
+	{
+ 		im1.release();
+		im2.release();
+	}
 	// detect keypoints & compute descriptors
 	surf(im1_gpu, cv::gpu::GpuMat(), im1_keypoints_gpu, im1_descriptors_gpu, false);
 	surf(im2_gpu, cv::gpu::GpuMat(), im2_keypoints_gpu, im2_descriptors_gpu, false);
- 
+ 	*/
 	std::vector<cv::DMatch> symMatches;
 	// compare two images using their gpu_descriptors
+	// test match only for pairs in the 'TOMATCH-list'
 	match2(im1_descriptors_gpu, im2_descriptors_gpu, symMatches);
 
 	surf.downloadKeypoints(im1_keypoints_gpu, im1_keypoints);
@@ -70,15 +112,15 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
 	surf.downloadDescriptors(im2_descriptors_gpu, im2_descriptors);
 
 	// 5. Validate matches (clean more) using RANSAC
-	std::vector<cv::DMatch> matches;
-	cv::Mat fundamental = ransacTest(symMatches, im1_keypoints, im2_keypoints, matches);
+	//std::vector<cv::DMatch> matches;
+	//cv::Mat fundamental = ransacTest(symMatches, im1_keypoints, im2_keypoints, matches);
 
 
 	//if (symMatches.size() < thresholdMatchPoints) return -1;
 
 	//TODO: not quite correct. It should be normalized by descriptors size.
-	//float k = (2 * symMatches.size()) / float(matches1.size() + matches2.size());
-	//cout << "k(I_i, I_j) = " << k << endl;
+	float k = (2 * symMatches.size()) / float(im1_keypoints.size() + im2_keypoints.size());
+	cout << "k(I_i, I_j) = " << k << endl;
 	
 	//if (k < 0.01) return -1;
 	
@@ -128,6 +170,7 @@ void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu,
 	matcher.knnMatch(im1_descriptors_gpu, im2_descriptors_gpu, matches1, 2);
 	matcher.knnMatch(im2_descriptors_gpu, im1_descriptors_gpu, matches2, 2);
 
+/*
 	GpuMat trainIdxMat1, distanceMat1, allDist1;
 	GpuMat trainIdxMat2, distanceMat2, allDist2;
 
@@ -140,14 +183,28 @@ void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu,
 	float2* distance1 = distanceMat1.ptr<float2>();
 	int2* trainIdx2 = trainIdxMat2.ptr<int2>();
 	float2* distance2 = distanceMat2.ptr<float2>();
+	
+    	std::cout << "Number of matched points 1->2 (trainIdxMat1):" << trainIdxMat1.size().width << std::endl;
+	std::cout << "Number of matched points 1->2 (trainIdxMat2): " << trainIdxMat2.size().width << std::endl;
 
+	std::cout << "Number of matched points 1->2 (matches1):" << matches1.size() << std::endl;
+	std::cout << "Number of matched points 1->2 (matches2): " << matches2.size() << std::endl;
+	//std::cout << "Number of matched points 2->1: " << allDist2.size << std::endl;
+    // invokes a cuda kernel to process the matches (testing)
 	ratio_aux(trainIdx1, trainIdx2,
-                            distance1, distance2);
-	//for (unsigned int i = 0; i < im1_descriptors_gpu; ++i)
-    	//{
+              distance1, distance2);
+
+	std::cout << "Kernel executed" << std::endl;
+*/
+	//TODO:idxs aus der GPU holen und testen, ob sie uebereinstimmen
+/*
+    for (unsigned int i = 0; i < im1_descriptors_gpu.size().width; ++i)
+    	{
+        //std::cout << "d " << p1 << std::endl;
         //reference[i].x = idata[i].x - idata[i].y;
         //reference[i].y = idata[i].y;
-    	//}
+    	}
+ */   
 	//std::cout << "d " << trainIdx1[1].x << std::endl;
 	
 	//std::cout << "Number of matched points 1->2: " << matches1.size() << std::endl;
@@ -190,7 +247,6 @@ int ComparatorCVGPU::ratioTest(std::vector< std::vector<cv::DMatch> >& matches) 
 				matchIterator->clear(); // remove match
 				removed++;
 			}
-
 		} else { // does not have 2 neighbours
 
 			matchIterator->clear(); // remove match
