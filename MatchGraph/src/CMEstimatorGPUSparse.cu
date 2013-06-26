@@ -204,7 +204,7 @@ Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, 
 	cudaMalloc((void**) &d_b, dim * sizeof(float));
 
 	//*****************************************************
-	// TODO directly obtain device pointers from GPUSparse
+	// TODO directly obtain device pointers from GPUSparseB
 	d_values = T_sparse->getValueArr(true, NULL, NULL, NULL);
 
 	int* colIdx = T_sparse->getColIdx();
@@ -217,6 +217,7 @@ Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, 
 	// END *************************************************
 
 	//Set up cula
+	//TODO Try to move to constructor
 	culaSparseHandle handle;
 	culaSparsePlan plan;
 	culaSparseConfig config;
@@ -238,6 +239,7 @@ Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, 
 		//0. determine number of best values for this column
 		//The bigger i, the less best indices are determined for this column
 		int xBestForThisColumn = ((dim-i)/(0.5*dim*(dim-1))) * kBest;
+		if (!xBestForThisColumn) xBestForThisColumn = 1; //at least 1 per column
 		//take into account that probably not as many indices as needed can be determined, so try o get them in the next column
 		int determineXforThisColumn = xBestForThisColumn + (determinedIndicesByNow - countIndices);
 		Indices* tmpIndices = new Indices[determineXforThisColumn];
@@ -252,10 +254,7 @@ Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, 
 		//3. gather indices
 		for(int j = 0; j < determineXforThisColumn && countIndices < kBest; j++)
 		{
-			if (-1 == tmpIndices[j].i)
-			{
-				break; //following indices are also -1
-			}
+			if (-1 == tmpIndices[j].i) break; //following indices are also -1
 			else
 			{
 				bestIndices[countIndices] = tmpIndices[j];
