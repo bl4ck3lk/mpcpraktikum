@@ -91,7 +91,7 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
 	float k = (2 * symMatches.size()) / float(matches1.size() + matches2.size());
 	cout << "k(I_i, I_j) = " << k << endl;
 	
-	//if (k < 0.01) return -1;
+	if (k < 0.01) return -1;
 	
 	if (showMatches) 
 	{	
