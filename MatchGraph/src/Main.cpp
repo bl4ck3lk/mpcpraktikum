@@ -23,7 +23,7 @@
 int main(int argc, char** argv)
 {
 	//const char* dir = "../resource/notre_dame_40"; //TODO use input-parameter
-	const char* dir = "/graphics/projects/data/photoDB_fromWWW/photoCollections/Flickr/P/paris";
+	const char* dir = "/graphics/projects/data/photoDB_fromWWW/photoCollections/Flickr/A/aachen";
 
 	////////////////////////
 	//computation handlers//
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
 
 	const int MAX_INIT_ITERATIONS 	= dim;//(dim*(dim-1))/2; //#elements in upper diagonal matrix
 	const int MIN_INIT_SIMILARITIES = 2*dim;
-	int sizeOfInitIndicesList 		= 50;
+	int sizeOfInitIndicesList 		= 30;
 
 	float lambda 	= 1.0;
 	int iterations 	= 4;

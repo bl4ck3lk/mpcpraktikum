@@ -38,7 +38,7 @@ void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int k
 		if (x != -1)
 		{
 			printf("[CPUComparator]: Comparing image %i: %s with image %i: %s.\n", x, iHandler->getFullImagePath(x), y, iHandler->getFullImagePath(y));
-			int resultCompare = comparator->compareGPU(iHandler->getFullImagePath(x), iHandler->getFullImagePath(y), true, true);
+			int resultCompare = comparator->compareGPU(iHandler->getFullImagePath(x), iHandler->getFullImagePath(y), false, true);
 			bool result = (resultCompare == 1) ? true : false;
 			printf(" Result: %i\n", result);
 

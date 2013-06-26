@@ -82,7 +82,7 @@ int ComparatorCVGPU::compareGPU(const char* img1, const char* img2, bool showMat
 	float k = (2 * symMatches.size()) / float(matches1.size() + matches2.size());
 	cout << "k(I_i, I_j) = " << k << endl;
 	
-	if (k < 0.02) return -1;
+	if (k < 0.01) return -1;
 	
 	if (showMatches) 
 	{	
@@ -124,7 +124,7 @@ int ComparatorCVGPU::compareGPU(const char* img1, const char* img2, bool showMat
 int ComparatorCVGPU::ratioTest(std::vector< std::vector<cv::DMatch> >& matches) {
 
 	int removed = 0;
-	float ratio = 0.8f;
+	float ratio = 0.85f;
 
 	// for all matches
 	for (std::vector< std::vector<cv::DMatch> >::iterator matchIterator = matches.begin();
