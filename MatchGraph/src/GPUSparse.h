@@ -11,8 +11,12 @@
 #include "MatrixHandler.h"
 #include <set>
 #include <map>
+#include <string>
+#include <boost/unordered_map.hpp> 
+#include <boost/unordered_set.hpp> 
 
 typedef std::map<int,std::set<int> > myElemMap;
+typedef boost::unordered_map<int, boost::unordered_set<int> > IndexMap;
 
 class GPUSparse : public MatrixHandler{
 private:
@@ -20,17 +24,25 @@ private:
 	const float lambda;
 	unsigned int num_similar; //# of similarities that is (number of 1s / 2)
 	unsigned int num_dissimilar; //# of dissimilarities that is (number of -1s / 2)
+	unsigned int nnz_rows; // # of rows having non-zero elements
+
+	bool firstInitMode;
 
 	int* colIdx;
 	int* rowPtr;
 	int* degrees;
 	int* diagPos; //position of diagonal elements within row
+	
+	int* _gpuRowPtr;
+	int* _gpuColIdx;
 
 	myElemMap newElemMap;
 	int numNewSimilar;
 	int numNewDiagonal;
 	
 	myElemMap dissimilarMap;
+	
+	IndexMap similarMap;
 
 	void addNewToRow(const int row, const int j);
 	void addDissimilarToColumn(const int column, const int row);
@@ -41,7 +53,7 @@ public:
 	GPUSparse(unsigned int _dim, float _lambda);
 	void updateSparseStatus(); //TODO later private?
 
-	//~GPUMatrix();
+	~GPUSparse();
 	void set(int i, int j, bool val);
 	unsigned int getDimension();
 	float* getConfMatrixF();
@@ -52,13 +64,17 @@ public:
 	void writeGML(char* filename, bool similar, bool dissimilar, bool potential);
 
 	/* SPARSE-specific */
-	float* getValueArr(bool gpuPointer, float* values, int* rowPtr, int* colIdx) const;
+	float* getValueArr(bool gpuPointer) const;
 	float* getColumn(int i) const;
 	int* getColIdx() const;
+	int* getColIdxDevice() const;
 	int* getRowPtr() const;
+	int* getRowPtrDevice() const;
 	unsigned int getNNZ() const;
+	void setRandom(int num);
 
-	static void prefixSumGPU(int* result, const int* array, const int dimension);
+	static int* prefixSumGPU(int* result, const int* array, const int dimension);
+	static void printGpuArray(int* devPtr, const int size, const std::string message);
 };
 
 #endif /* GPUSPARSE_H_ */
