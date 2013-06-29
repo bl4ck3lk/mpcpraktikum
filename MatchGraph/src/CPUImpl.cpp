@@ -58,9 +58,10 @@ float* CPUImpl::getConfMatrixF()
 		F.col(j) = laplacian.colPivHouseholderQr().solve(m.col(j));
 	}
 
+
 	F = symmetrize(F, dim);
 
-	std::cout << "F Matrix is: \n" << F << std::endl;
+	//std::cout << "F Matrix is: \n" << F << std::endl;
 
 	//to float*
 	float* arr = new float[dim*dim];
@@ -71,6 +72,7 @@ float* CPUImpl::getConfMatrixF()
 			arr[i*dim+j] = (float)F(i,j);
 		}
 	}
+
 	return arr;
 }
 

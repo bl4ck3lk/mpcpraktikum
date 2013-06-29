@@ -2,13 +2,24 @@
 # Add source files here
 TARGET		:= Main
 # Cuda source files (compiled with cudacc)
-CUFILES		:= CMEstimatorGPUSorted.cu CMEstimatorGPUApprox.cu GPUMatrix.cu
+CUFILES		:= CMEstimatorGPUSorted.cu CMEstimatorGPUApprox.cu GPUMatrix.cu GPUSparse.cu CMEstimatorGPUSparse.cu
 # C/C++ source files (compiled with gcc / c++)
-CCFILES		:= Main.cpp CPUImpl.cpp CPUComparator.cpp CMEstimatorCPU.cpp ImageHandler.cpp Tester.cpp Comparator.cpp Comparator_CVGPU.cpp
+CCFILES		:= Main.cpp CPUImpl.cpp CPUComparator.cpp CMEstimatorCPU.cpp ImageHandler.cpp Tester.cpp  Comparator_CVGPU.cpp #Comparator.cpp
 
+#Paths to be set
+#### CUDA #####
+#export CUDA_INSTALL_PATH="/graphics/projects/cuda/toolkit_5.0/cuda/"
+#export PATH="./:/graphics/projects/cuda/toolkit_5.0/cuda/open64/bin/:/graphics/projects/cuda/toolkit_5.0/cuda/bin/:/graphics/projects/cuda/toolkit_5.0/cuda/nvvm/:$PATH"
+#export LD_LIBRARY_PATH="/graphics/projects/cuda/toolkit_5.0/cuda/lib64/:$LD_LIBRARY_PATH"
 
+#### CULA ####
+#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/schwarzk/cula_sparse/lib64/
+#export CULASPARSE_INC_PATH="/home/schwarzk/cula_sparse/include"
+#export CULASPARSE_LIB_PATH_64="/home/schwarzk/cula_sparse/lib64"
 
-#/graphics/projects/cuda/cula_r14/lib64
+#### OPEN CV ####
+#export PKG_CONFIG_PATH=/graphics/projects/opt/OpenCV-2.4.1_cuda/lib/pkgconfig
+#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/graphics/projects/opt/OpenCV-2.4.1_cuda/lib
 
 # Warning flags
 CXXWARN_FLAGS := \
@@ -59,9 +70,9 @@ LINK       := g++ -fPIC
 
 PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/graphics/projects/opt/OpenCV-2.4.1_cuda/lib/pkgconfig
 export PKG_CONFIG_PATH
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/graphics/projects/opt/OpenCV-2.4.1_cuda/lib
-export LD_LIBRARY_PATH
-INCLUDES  += -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_SDK_DIR)/C/common/inc -I /lib/Eigen -I /graphics/projects/cuda/cula_r14/include `pkg-config opencv --cflags` 
+#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/graphics/projects/opt/OpenCV-2.4.1_cuda/lib
+#export LD_LIBRARY_PATH
+INCLUDES  += -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_SDK_DIR)/C/common/inc -I /lib/Eigen -I /graphics/projects/cuda/cula_r14/include -I /home/schwarzk/cula_sparse/include `pkg-config opencv --cflags` 
 
 CXXFLAGS += $(INCLUDES)
 CFLAGS += $(INCLUDES)
@@ -86,8 +97,7 @@ CXXFLAGS += $(COMMONFLAGS)
 CFLAGS += $(COMMONFLAGS)
 NVCCFLAGS += $(COMMONFLAGS)
 
-
-LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64 -lcudart -L /graphics/projects/cuda/cula_r14/lib64 `pkg-config opencv --libs`
+LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64 -lcula_sparse -lcublas -liomp5 -lpthread -lcolamd -lcusparse -lcudart -L /graphics/projects/cuda/cula_r14/lib64 -L /home/schwarzk/cula_sparse/lib64 `pkg-config opencv --libs`
 
 
 OBJS := $(patsubst %.cpp,%.o,$(CCFILES))

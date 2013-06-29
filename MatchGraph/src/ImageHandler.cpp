@@ -1,6 +1,10 @@
 /*
  * ImageHandler.cpp
  *
+ * Initializes a given directory by indexing all images within this directory
+ * in a map such that the image-path can be obtained fast by the corresponding
+ * index.
+ *
  *  Created on: 29.05.2013
  *      Author: furby
  */
@@ -29,9 +33,8 @@ ImageHandler::ImageHandler(const char* imgDir)
         while ((dirEntry = readdir(dirHandle)) != NULL)
         { 
         	char* entry = (char*)dirEntry->d_name;
-			if (strcmp(entry,".") != 0 && strcmp(entry,"..") != 0)
+			if (strcmp(entry,".") != 0 && strcmp(entry,"..") != 0 && dirEntry->d_type == DT_REG)
 			{
-				//printf("%s\n",dirEntry->d_name);
 				images.insert(std::pair<int,std::string>(nrImages++, dirEntry->d_name));
 			}
         }
@@ -97,31 +100,3 @@ void ImageHandler::fillWithEmptyImages(unsigned int num)
 		images.insert(std::pair<int,std::string>(nrImages++, ""));
 	}
 }
-
-
-// tries to sort images based on filename under assumption filename begins with number
-// ATTENTION: this function is currently just a bad hack for testing purpose!!!
-//
-// Fabi:
-// An ein vorsortieren dachte ich auch zuerst, aber brauchen wir das tatsächlich? 
-// Die Reihenfolge der Bilder wird sich nicht ändern, während wir das Programm ausführen.
-// D.h. wenn wir sie einmal (in irgendeiner Reihenfolge) eingelesen haben, bleibt das 1. Bild
-// auch immer das 1. Bild.
-/*
-void ImageHandler::sortImages(){
-	std::map<int,char> sorted;
-	char* sortArr[nrImages];
-	for(int i = 0; i < nrImages; i++)
-	{
-		//note: just a bad hack to get first character, assuming it is a small integer number [0 - 9].
-		int index = (int)(*images.find(i)->second) - 48;
-		sortArr[index] = images[i];
-
-	}
-	for(int i = 0; i < nrImages; i++)
-	{
-		images[i] = sortArr[i];
-		//std::cout << sortArr[i] << std::endl;
-	}
-}
-*/

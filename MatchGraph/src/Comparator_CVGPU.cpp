@@ -3,23 +3,14 @@
 #include <iostream>
 #include <stdlib.h>     /* abs */
 #include <algorithm>    // std::max
-#include <opencv2/core/core.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/nonfree/features2d.hpp> //This is where actual SURF and SIFT algorithm is located
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/calib3d/calib3d.hpp> // for homography
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/gpu/gpu.hpp>
 #include "Comparator_CVGPU.h"
-
-#include <vector>
 
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
 
-int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool drawEpipolar)
+int ComparatorCVGPU::compareGPU(const char* img1, const char* img2, bool showMatches, bool drawEpipolar)
 {
 	cv::Mat im1 = imread( img1, 0 );
 	cv::Mat im2 = imread( img2, 0 );
@@ -73,7 +64,7 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
 	symmetryTest(matches1,matches2,symMatches);
 
 	std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
-	
+	if (symMatches.size() < 10) return -1;
 		
 	surf.downloadKeypoints(im1_keypoints_gpu, im1_keypoints);
 	surf.downloadKeypoints(im2_keypoints_gpu, im2_keypoints);
@@ -88,10 +79,10 @@ int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool d
 	//if (symMatches.size() < thresholdMatchPoints) return -1;
 
 	//TODO: not quite correct. It should be normalized by descriptors size.
-	float k = (2 * symMatches.size()) / float(matches1.size() + matches2.size());
+	float k = (2 * symMatches.size()) / float(im1_keypoints.size() + im2_keypoints.size());
 	cout << "k(I_i, I_j) = " << k << endl;
 	
-	//if (k < 0.01) return -1;
+	if (k < 0.02) return -1;
 	
 	if (showMatches) 
 	{	
