@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdlib.h>     /* abs */
 #include <algorithm>    // std::max
+#include <map>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/features2d.hpp> //This is where actual SURF and SIFT algorithm is located
@@ -26,138 +27,50 @@ using namespace cv::gpu;
 void ratio_aux(const int2 * trainIdx1, int2 * trainIdx2,
                             const float2 * distance1, const float2 * distance2);
 
+struct IMG {
+    cv::gpu::GpuMat im_gpu;
+    cv::gpu::GpuMat keypoints, descriptors;
+    std::vector<cv::KeyPoint> h_keypoints;
+    std::vector<float> h_descriptors;
+  };
+
 // should be modified to: get an array of images, upload them all
 // ? extract all features immediately?
 // match a desired pair using the match2 function
-int ComparatorCVGPU::compareGPU(char* img1, char* img2, bool showMatches, bool drawEpipolar)
+int ComparatorCVGPU::compareGPU(std::string* images1, std::string* images2, int k, bool showMatches, bool drawEpipolar)
 {
-	// TODO: images should be passed as an array of images pairs.
-	cv::Mat im1 = imread( img1, 0 );
-	cv::Mat im2 = imread( img2, 0 );
+	std::map< std::string, IMG > comparePairs;
 
-	//Mat im1r, im2r;
-	//CvSize size1 = cvSize(im1.cols, 540);
-	//CvSize size2 = cvSize(im2.cols, 540);
-	//resize(im1, im1, size1);
-	//resize(im2, im2, size2);
-	//imshow("i1",im1);
-	//imshow("i2",im2);
-
-	// for each image pair in input array do:
-	if( !im1.data || !im2.data )
-	{ std::cout<< " --(!) Error reading images " << std::endl; return -1; }
-
-	// use new ...
-	cv::gpu::GpuMat im1_gpu, im2_gpu;
-	cv::gpu::GpuMat im1_keypoints_gpu, im1_descriptors_gpu;
-	cv::gpu::GpuMat im2_keypoints_gpu, im2_descriptors_gpu;
-
-	std::vector<std::vector < cv::gpu::GpuMat*> > pairs;
-	std::vector < cv::gpu::GpuMat*> tmp;
-	
-	tmp.push_back(&im1_gpu);
-	tmp.push_back(&im2_gpu);
-	tmp.push_back(&im1_keypoints_gpu);
-	tmp.push_back(&im2_keypoints_gpu);
-
-	tmp.push_back(&im1_descriptors_gpu);
-	tmp.push_back(&im2_descriptors_gpu);
-
-	pairs.push_back(tmp);
 	SURF_GPU surf;
- 
-	std::vector<cv::KeyPoint> im1_keypoints, im2_keypoints;
-	std::vector<float> im1_descriptors, im2_descriptors;
- 	// end for
+	for (int i=0; i < k; i++) {
+		if (comparePairs.find(images1[i]) == comparePairs.end()) {
+			comparePairs.insert(std::make_pair(images1[i], uploadImage(images1[i], surf)));
+			std::cout << "Picture inserted : " << images1[i] << std::endl;
+		}
 
-	// upload all the necessary data for each comp-pair
-	for (std::vector<std::vector < cv::gpu::GpuMat*> >::iterator it = pairs.begin();
-it != pairs.end(); ++it) {
-		//it[0] - im1
-		//it[1] - im2
-		(*it)[0]->upload(im1); 
-		(*it)[1]->upload(im2);
-		// im1 and im2 above should come from another vector/array with
-		// correspondent indices
-		// upload should be done only if not done yet!
-		// once done, save this information!
+		if (comparePairs.find(images2[i]) == comparePairs.end()) {
+			comparePairs.insert(std::make_pair(images2[i], uploadImage(images2[i], surf)));
+			std::cout << "Picture inserted : " << images2[i] << std::endl;
+		}
 
-
-		// detect keypoints & compute descriptors
-		surf(*(*it)[0], cv::gpu::GpuMat(), *(*it)[2], *(*it)[4], false);
-		surf(*(*it)[1], cv::gpu::GpuMat(), *(*it)[3], *(*it)[5], false);
-		// release im1 and im2	
-	}
-	// upload images into the GPU
-	//im1_gpu.upload(im1);
-	//im2_gpu.upload(im2);
-	/*	
-	if (!showMatches) // free memory we won't use again
-	{
- 		im1.release();
-		im2.release();
-	}
-	// detect keypoints & compute descriptors
-	surf(im1_gpu, cv::gpu::GpuMat(), im1_keypoints_gpu, im1_descriptors_gpu, false);
-	surf(im2_gpu, cv::gpu::GpuMat(), im2_keypoints_gpu, im2_descriptors_gpu, false);
- 	*/
-	std::vector<cv::DMatch> symMatches;
-	// compare two images using their gpu_descriptors
-	// test match only for pairs in the 'TOMATCH-list'
-	match2(im1_descriptors_gpu, im2_descriptors_gpu, symMatches);
-
-	surf.downloadKeypoints(im1_keypoints_gpu, im1_keypoints);
-	surf.downloadKeypoints(im2_keypoints_gpu, im2_keypoints);
-	surf.downloadDescriptors(im1_descriptors_gpu, im1_descriptors);
-	surf.downloadDescriptors(im2_descriptors_gpu, im2_descriptors);
-
-	// 5. Validate matches (clean more) using RANSAC
-	//std::vector<cv::DMatch> matches;
-	//cv::Mat fundamental = ransacTest(symMatches, im1_keypoints, im2_keypoints, matches);
-
-
-	//if (symMatches.size() < thresholdMatchPoints) return -1;
-
-	//TODO: not quite correct. It should be normalized by descriptors size.
-	float k = (2 * symMatches.size()) / float(im1_keypoints.size() + im2_keypoints.size());
-	cout << "k(I_i, I_j) = " << k << endl;
-	
-	//if (k < 0.01) return -1;
-	
-	if (showMatches) 
-	{	
-	// Convert keypoints into Point2f
-	std::vector<cv::Point2f> points1, points2;
-
-	for (std::vector<cv::DMatch>::const_iterator it = symMatches.begin();
-			it != symMatches.end(); ++it) {
-
-		// Get the position of left keypoints
-		float x = im1_keypoints[it->queryIdx].pt.x;
-		float y = im1_keypoints[it->queryIdx].pt.y;
-		points1.push_back(cv::Point2f(x,y));
-		cv::circle(im1,cv::Point(x,y),3,cv::Scalar(255,0,0),2);
-		// Get the position of right keypoints
-		x = im2_keypoints[it->trainIdx].pt.x;
-		y = im2_keypoints[it->trainIdx].pt.y;
-		cv::circle(im2,cv::Point(x,y),3,cv::Scalar(255,0,0),2);
-		points2.push_back(cv::Point2f(x,y));
+		std::vector<cv::DMatch> symMatches;
+		IMG& i1 = comparePairs.find(images1[i])->second;
+		IMG& i2 = comparePairs.find(images2[i])->second;
+		match2(i1.descriptors, i2.descriptors, symMatches);
 	}
 
-		Mat img_matches;
-		//cv::drawMatches(im1, im1_keypoints, im2, im2_keypoints, matches, img_matches);
-		//cv::imshow("Matches", img_matches);
-		
-		cv::imshow("Image 1", im1);
-		cv::imshow("Image 2", im2);
-		
-		cv::waitKey();
-	 }
- 
+	// download result?
+	// ransac??
 	return 1;
-
 }
 
+IMG ComparatorCVGPU::uploadImage(const std::string& inputImg, SURF_GPU& surf) {
+	struct IMG* img = new IMG();
+	cv::Mat imgfile = imread( inputImg, 0 );
+	img->im_gpu.upload(imgfile);
+	surf(img->im_gpu, cv::gpu::GpuMat(), img->keypoints, img->descriptors, false);
+	return *img;
+}
 void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu, 
 				cv::gpu::GpuMat& im2_descriptors_gpu,
 				std::vector<cv::DMatch>& symMatches) {
@@ -211,7 +124,8 @@ void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu,
 	//std::cout << "Number of matched points 2->1: " << matches2.size() << std::endl;
 
 	// 3. Remove matches for which NN ratio is > than threshold
-
+	std::cout << "Number of matched points 1->2: " << matches1.size() << std::endl;
+	std::cout << "Number of matched points 2->1: " << matches2.size() << std::endl;
 	// clean image 1 -> image 2 matches
 	int removed = ratioTest(matches1);
 	// clean image 2 -> image 1 matches
@@ -369,7 +283,24 @@ cv::Mat ComparatorCVGPU::ransacTest(const std::vector<cv::DMatch>& matches,
 
 int main( int argc, char** argv )
 {
+	int k = 6;
+	std::string images1[k];
+	images1[0] = "paris1.jpg";
+	images1[1] = "paris1.jpg";
+	images1[2] = "House1.jpg";
+	images1[3] = "House1.jpg";
+	images1[4] = "castle1.jpg";
+	images1[5] = "castle1.jpg";
+
+	std::string images2[k];
+	images2[0] = "paris2.jpg";
+	images2[1] = "House1.jpg";
+	images2[2] = "House2.jpg";
+	images2[3] = "castle1.jpg";
+	images2[4] = "castle2.jpg";
+	images2[5] = "paris2.jpg";
 	ComparatorCVGPU comp;
-	int result = comp.compareGPU(argv[1], argv[2], true, false);
+	int result = comp.compareGPU(images1, images2, k, true, false);
+	//int result = comp.compareGPU(argv[1], argv[2], true, false);
 	cout << "result = " << result << endl;
 }

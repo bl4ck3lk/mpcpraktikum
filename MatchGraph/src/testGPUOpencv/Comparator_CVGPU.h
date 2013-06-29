@@ -10,8 +10,8 @@
 
 class ComparatorCVGPU {
 public:
-	int compareGPU(char* img1, char* img2, bool showMatches=true, bool drawEpipolar=false);
-    
+	//int compareGPU(char* img1, char* img2, bool showMatches=true, bool drawEpipolar=false);
+    	int compareGPU(std::string* images1, std::string* images2, int k, bool showMatches, bool drawEpipolar);
     	int ratioTest(std::vector< std::vector<cv::DMatch> >& matches);
     
 	void symmetryTest(const std::vector< std::vector<cv::DMatch> >& matches1,
@@ -27,6 +27,7 @@ public:
 				cv::gpu::GpuMat& im2_descriptors_gpu,
 				std::vector<cv::DMatch>& symMatches);
 
+	struct IMG uploadImage(const std::string& img, cv::gpu::SURF_GPU& surf);
 	~ComparatorCVGPU(){};
 };
 
