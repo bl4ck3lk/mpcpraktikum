@@ -15,7 +15,7 @@ class ImageHandler
 {
 	public:
 		ImageHandler(const char* imgDir); //constructor
-		//~ImageHandler(); //destructor
+		~ImageHandler(); //destructor
 		const char* getImage(int img); //get specific image
 		const char* getFullImagePath(int img);
 		int getTotalNr(); //get total nr of images

@@ -40,13 +40,13 @@ ImageHandler::ImageHandler(const char* imgDir)
     } 
 }
 
-/*
+
 //destructor
 ImageHandler::~ImageHandler()
 {
-	//todo?
+	images.clear();
 }
-*/
+
 
 //Get total number of images
 int ImageHandler::getTotalNr()
