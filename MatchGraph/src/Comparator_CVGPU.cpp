@@ -64,7 +64,7 @@ int ComparatorCVGPU::compareGPU(const char* img1, const char* img2, bool showMat
 	symmetryTest(matches1,matches2,symMatches);
 
 	std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
-	if (symMatches.size() < 1) return -1;
+	if (symMatches.size() < 10) return -1;
 		
 	surf.downloadKeypoints(im1_keypoints_gpu, im1_keypoints);
 	surf.downloadKeypoints(im2_keypoints_gpu, im2_keypoints);
