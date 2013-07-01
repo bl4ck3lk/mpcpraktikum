@@ -106,6 +106,13 @@ CMEstimatorGPUSparse::CMEstimatorGPUSparse() {
 	d_res = NULL;
 }
 
+CMEstimatorGPUSparse::~CMEstimatorGPUSparse() {
+	//free device pointer
+	if (d_idx1 != NULL) cudaFree(d_idx1);
+	if (d_idx2 != NULL) cudaFree(d_idx2);
+	if (d_res != NULL) cudaFree(d_res);
+}
+
 //Allocate device memory for index pointers and clear last used pointers
 //(for dynamic change of kBes values index-arays)
 void CMEstimatorGPUSparse::initIdxDevicePointers(int size, unsigned int dim)
@@ -316,7 +323,11 @@ Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, 
 	/* if index array size changed since last use, allocate new device memory
 	 * with new size and free old device memory. Otherwise reuse device memory.
 	 */
-	if (kBest != lastSize) initIdxDevicePointers(kBest, dim);
+	if (kBest != lastSize)
+	{
+		initIdxDevicePointers(kBest, dim);
+		lastSize = kBest;
+	}
 	int countIndices = 0;
 
 	//set up data for solver
@@ -347,6 +358,8 @@ Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, 
 	cudaMalloc((void**) &d_rowPtr, (dim+1) * sizeof(int));
 	cudaMemcpy(d_rowPtr, rowPtr, (dim+1) * sizeof(int), cudaMemcpyHostToDevice);
 	// END *************************************************
+
+	printf("pointers\n");
 
 	//Set up cula
 	//TODO Try to move to constructor

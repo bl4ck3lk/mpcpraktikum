@@ -15,10 +15,9 @@
 class CMEstimatorGPUSparse : public CMEstimator{
 public:
 	CMEstimatorGPUSparse();
-	Indices* getKBestConfMeasures(MatrixHandler* T, float* F, int kBest);
+	virtual ~CMEstimatorGPUSparse();
+	Indices* getKBestConfMeasures(MatrixHandler* T, float* F, int kBest); //todo change return value to void
 	Indices* getInitializationIndices(MatrixHandler* T, int initNr);
-	//TODO destructor
-	//virtual ~CMEstimatorGPUSparse();
 
 private:
 	int lastSize;
