@@ -487,7 +487,7 @@ Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, 
 		cudaMemcpy(h_idx2, d_idx2, kBest*sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(h_res, d_res, kBest*sizeof(int), cudaMemcpyDeviceToHost);
 
-		printf("Images to be compared:")
+		printf("Images to be compared:");
 		Tester::printArrayInt(h_idx1, kBest);
 		Tester::printArrayInt(h_idx2, kBest);
 		Tester::printArrayInt(h_res, kBest);
