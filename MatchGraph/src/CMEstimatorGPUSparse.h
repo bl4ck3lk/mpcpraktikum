@@ -16,8 +16,18 @@ class CMEstimatorGPUSparse : public CMEstimator{
 public:
 	CMEstimatorGPUSparse();
 	virtual ~CMEstimatorGPUSparse();
-	Indices* getKBestConfMeasures(MatrixHandler* T, float* F, int kBest); //todo change return value to void
-	Indices* getInitializationIndices(MatrixHandler* T, int initNr);
+
+	int* getIdx1DevicePtr();
+	int* getIdx2DevicePtr();
+	int* getResDevicePtr();
+
+	int* getResHostPtr(int dim); //todo only for testing purpose
+	void setResDevicePtr(int* res, int dim); //todo only for testing purpose
+
+	Indices* getKBestConfMeasures(MatrixHandler* T, float* F, int kBest); //not used in this implementation
+	void getKBestConfMeasuresSparse(MatrixHandler* T, float* F, int kBest);
+
+	Indices* getInitializationIndices(MatrixHandler* T, int initNr); //not used in this implementation
 
 private:
 	int lastSize;
@@ -25,11 +35,18 @@ private:
 	int* d_idx1;
 	int* d_idx2;
 	int* d_res;
+	int* res;
 
-	Indices* getKBestConfMeasures(float* xColumnDevice, float* bColumnDevice, int columnIdx, int dim, int kBest); //TODO remove me
+	/* cula */
+	culaSparseHandle handle;
+	culaSparsePlan plan;
+	culaSparseConfig config;
+
+	Indices* getKBestConfMeasures(float* xColumnDevice, float* bColumnDevice, int columnIdx, int dim, int kBest);
 	int determineBestConfMeasures(float* xColumnDevice, float* bColumnDevice, int columnIdx, int dim, int kBest, int kBestForThisColumn, int currIndexNr);
 	void computeConfidenceMeasure(culaSparseHandle handle, culaSparsePlan plan, culaSparseConfig config, unsigned int dim, unsigned int nnz, float* A, int* rowPtr, int* colIdx, float* x, float* b);
 	void initIdxDevicePointers(int size, unsigned int dim);
+	void initCula();
 };
 
 #endif /* CMESTIMATORGPUSPARSE_H_ */
