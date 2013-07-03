@@ -12,11 +12,8 @@
 #include <set>
 #include <map>
 #include <string>
-#include <boost/unordered_map.hpp> 
-#include <boost/unordered_set.hpp> 
 
 typedef std::map<int,std::set<int> > myElemMap;
-typedef boost::unordered_map<int, boost::unordered_set<int> > IndexMap;
 
 class GPUSparse : public MatrixHandler{
 private:
@@ -34,8 +31,6 @@ private:
 	int* _gpuColIdx;
 	
 	myElemMap dissimilarMap;
-	
-	IndexMap similarMap;
 
 	void addNewToRow(const int row, const int j);
 	void addDissimilarToColumn(const int column, const int row);
