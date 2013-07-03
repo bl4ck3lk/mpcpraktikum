@@ -72,7 +72,7 @@ PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/graphics/projects/opt/OpenCV-2.4.1_cuda/lib/pk
 export PKG_CONFIG_PATH
 #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/graphics/projects/opt/OpenCV-2.4.1_cuda/lib
 #export LD_LIBRARY_PATH
-INCLUDES  += -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_SDK_DIR)/C/common/inc -I /lib/Eigen -I /graphics/projects/cuda/cula_r14/include -I /home/schwarzk/cula_sparse/include `pkg-config opencv --cflags` 
+INCLUDES  += -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_SDK_DIR)/C/common/inc -I /graphics/projects/cuda/sdk_4.2/CUDALibraries/common/inc -I /lib/Eigen -I /graphics/projects/cuda/cula_r14/include -I /home/schwarzk/cula_sparse/include `pkg-config opencv --cflags` 
 
 CXXFLAGS += $(INCLUDES)
 CFLAGS += $(INCLUDES)
