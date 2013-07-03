@@ -224,7 +224,8 @@ void Initializer::doInitializationPhase(MatrixHandler* T, ImageHandler* iHandler
 
 	//compare images
 	cudaMemcpy(testResult3, d_initRes, initArraySize*sizeof(int), cudaMemcpyDeviceToHost); //todo remove me (just for testing)
-	comparator->doComparison(iHandler, T, d_initIdx1, d_initIdx2, testResult3, initArraySize);
+	cudaMemcpy(testResult2, d_initIdx1, initArraySize*sizeof(int), cudaMemcpyDeviceToHost); //todo remove me (just for testing)
+	comparator->doComparison(iHandler, T, testResult2, d_initIdx2, testResult3, initArraySize);
 	cudaMemcpy(d_initRes, testResult3, initArraySize*sizeof(int), cudaMemcpyHostToDevice); //todo remove me (just for testing)
 
 	//todo remove debug printing

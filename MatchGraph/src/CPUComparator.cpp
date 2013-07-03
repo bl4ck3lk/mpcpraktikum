@@ -28,7 +28,7 @@ void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 		srand (time(NULL));
 		int rndRes;
 
-		for(int i = 0; i < arraySize; i++)
+		for(int i = 0; i < arraySize && d_idx1[i] < T->getDimension(); i++)
 		{
 			rndRes = rand() % 2;
 			d_res[i] = rndRes;

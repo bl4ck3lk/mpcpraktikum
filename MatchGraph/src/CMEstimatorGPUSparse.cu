@@ -104,7 +104,9 @@ CMEstimatorGPUSparse::CMEstimatorGPUSparse() {
 	d_idx1 = NULL;
 	d_idx2 = NULL;
 	d_res = NULL;
-	res = NULL;
+
+	res = NULL; //todo remove me (testing)
+	idx1 = NULL; //todo remove me (testing)
 
 	/* cula initialization */
 	initCula();
@@ -157,6 +159,16 @@ int* CMEstimatorGPUSparse::getResHostPtr(int dim)
 
 	cudaMemcpy(res, d_res, dim*sizeof(int), cudaMemcpyDeviceToHost);
 	return res;
+}
+
+//todo remove me. only for testing purpose.
+int* CMEstimatorGPUSparse::getIdx1HostPtr(int dim)
+{
+	if (idx1 != NULL) free(idx1);
+	idx1 = (int*)malloc(dim*sizeof(int));
+
+	cudaMemcpy(idx1, d_idx1, dim*sizeof(int), cudaMemcpyDeviceToHost);
+	return idx1;
 }
 
 //todo remove me. only for testing purpose

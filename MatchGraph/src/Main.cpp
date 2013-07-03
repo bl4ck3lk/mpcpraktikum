@@ -84,7 +84,7 @@ int main(int argc, char** argv)
 
 		//compare images which are located in the device arrays of CME_sparse
 		int* testResult = CME_sparse->getResHostPtr(kBest); //todo remove me. for testing purpose only.
-		comparator->doComparison(iHandler, T, CME_sparse->getIdx1DevicePtr(), CME_sparse->getIdx2DevicePtr(), testResult, kBest);
+		comparator->doComparison(iHandler, T, CME_sparse->getIdx1HostPtr(kBest), CME_sparse->getIdx2DevicePtr(), testResult, kBest);
 		CME_sparse->setResDevicePtr(testResult, kBest); //todo remove me. for testing purpose only.
 
 		//update matrix with new information (compared images)

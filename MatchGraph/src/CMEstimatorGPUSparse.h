@@ -21,6 +21,7 @@ public:
 	int* getIdx2DevicePtr();
 	int* getResDevicePtr();
 
+	int* getIdx1HostPtr(int dim); //todo only for testing purpose
 	int* getResHostPtr(int dim); //todo only for testing purpose
 	void setResDevicePtr(int* res, int dim); //todo only for testing purpose
 
@@ -35,7 +36,9 @@ private:
 	int* d_idx1;
 	int* d_idx2;
 	int* d_res;
-	int* res;
+
+	int* idx1; //todo only for testing purpose
+	int* res; //todo only for testing purpose
 
 	/* cula */
 	culaSparseHandle handle;
