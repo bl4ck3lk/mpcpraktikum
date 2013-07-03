@@ -6,14 +6,34 @@
  */
 
 #include "CPUComparator.h"
-//#include "Comparator.h"
 #include "Comparator_CVGPU.h"
 #include <stdio.h> //printf
+
+//todo remove me (random)
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
 
 CPUComparator::CPUComparator()
 {
 	// TODO Auto-generated constructor stub
 
+}
+
+
+void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* d_idx1, int* d_idx2, int* d_res, int arraySize)
+{
+	if (true) //todo remove me (just for testing purpose)
+	{
+		//random seed
+		srand (time(NULL));
+		int rndRes;
+
+		for(int i = 0; i < arraySize; i++)
+		{
+			rndRes = rand() % 2;
+			d_res[i] = rndRes;
+		}
+	}
 }
 
 void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int kBest, Indices* kBestIndices)

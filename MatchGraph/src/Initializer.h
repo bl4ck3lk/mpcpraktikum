@@ -9,33 +9,16 @@
 #define INITIALIZER_H_
 
 #include "MatrixHandler.h"
-//#include "ImageComparator.h"
-#include <map>
-#include <string>
-
-class ImageComparator;
+#include "ImageComparator.h"
+#include "ImageHandler.h"
 
 class Initializer {
 public:
-	Initializer(const char* imgDir); //constructor
+	Initializer(); //constructor
 	~Initializer(); //destructor
 
-	/* for image handling */
-	const char* getImage(int img); //get specific image
-	const char* getFullImagePath(int img);
-	int getTotalNr(); //get total nr of images
-	int getMapSize();
-	void printMap();
-	void sortImages();
-	void fillWithEmptyImages(unsigned int num);
-
 	/* for T Matrix initialization */
-	bool doInitializationPhase(MatrixHandler* T, ImageComparator* comparator, int comparatorArraySize, int similarThreshold, int maxUpdateArraySize);
-
-private:
-	std::map<int,std::string> images;
-	int nrImages; //total number of images
-	std::string directory;
+	void doInitializationPhase(MatrixHandler* T, ImageHandler* iHandler, ImageComparator* comparator, int initAraySize);
 };
 
 #endif /* INITIALIZER_H_ */

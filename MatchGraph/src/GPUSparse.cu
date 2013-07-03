@@ -347,6 +347,10 @@ void GPUSparse::handleDissimilar(int* idxData, int num)
 	{
 		int col = idxData[i];
 		int row = idxData[i+1];
+
+		if(col > dim)
+			break;
+
 		addDissimilarToColumn(col, row);
 		addDissimilarToColumn(row, col);
 	}
@@ -354,10 +358,10 @@ void GPUSparse::handleDissimilar(int* idxData, int num)
 
 void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 {
-	int* idx1;
-	int* idx2;
-	int* res;
-	int k = 7;
+	int* idx1 = _idx1;
+	int* idx2 = _idx2;
+	int* res = _res;
+	int k = _k;
 
 	printf("Current Matrix:\n");
 	printGpuArray(_gpuColIdx, getNNZ(), "colIdx");
@@ -365,22 +369,24 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	printGpuArray(_gpuDiagPos, dim, "diagPos");
 	printGpuArray(_gpuDegrees, dim, "degrees");
 
-	if (true)
-	{
-		std::cout << "First Test Initialization" << std::endl;
-		cudaMalloc((void**) &idx1, k * sizeof(int));
-		cudaMalloc((void**) &idx2, k * sizeof(int));
-		cudaMalloc((void**) &res, k * sizeof(int));
-		int Tidx1[7] =
-		{ 0, 0, 1, 1, 3, 3, 4 };
-		int Tidx2[7] =
-		{ 3, 1, 4, 2, 2, 1, 2 };
-		int Tres[7] =
-		{ 1, 1, 0, 1, 1, 0, 1 };
-		cudaMemcpy(idx1, Tidx1, k * sizeof(int), cudaMemcpyHostToDevice);
-		cudaMemcpy(idx2, Tidx2, k * sizeof(int), cudaMemcpyHostToDevice);
-		cudaMemcpy(res, Tres, k * sizeof(int), cudaMemcpyHostToDevice);
-	}
+	CUDA_CHECK_ERROR()
+
+//	if (true)
+//	{
+//		std::cout << "First Test Initialization" << std::endl;
+//		cudaMalloc((void**) &idx1, k * sizeof(int));
+//		cudaMalloc((void**) &idx2, k * sizeof(int));
+//		cudaMalloc((void**) &res, k * sizeof(int));
+//		int Tidx1[7] =
+//		{ 0, 0, 1, 1, 3, 3, 4 };
+//		int Tidx2[7] =
+//		{ 3, 1, 4, 2, 2, 1, 2 };
+//		int Tres[7] =
+//		{ 1, 1, 0, 1, 1, 0, 1 };
+//		cudaMemcpy(idx1, Tidx1, k * sizeof(int), cudaMemcpyHostToDevice);
+//		cudaMemcpy(idx2, Tidx2, k * sizeof(int), cudaMemcpyHostToDevice);
+//		cudaMemcpy(res, Tres, k * sizeof(int), cudaMemcpyHostToDevice);
+//	}
 
 	printf("input:\n");
 	printGpuArray(idx1, k, "idx1");
@@ -409,6 +415,8 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	cudaMalloc((void**) &cleanedIdx2, numSimilar * sizeof(int));
 	cudaMalloc((void**) &negativeIndx, (2*(k - numSimilar))*sizeof(int));
 
+	CUDA_CHECK_ERROR()
+
 	numThreads = 32;
 	numBlocks = 1 + (k / numThreads);
 	cleanIndexArrays<<<numBlocks, numThreads>>>(cleanedIdx1, cleanedIdx2, negativeIndx, idx1, idx2, res, prefixSumResult, k);
@@ -427,6 +435,8 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 
 	cudaMalloc((void**) &rowData, 4 * (dim + 1) * sizeof(int));
 	initKernel<<<256, 256>>>(rowData, 0, 4 * (dim + 1));
+
+	CUDA_CHECK_ERROR()
 
 	int* rowIncrIdx1 = rowData;
 	int* rowIncrIdx2 = rowData + (dim + 1);
@@ -467,13 +477,15 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 
 	arrayAddKernel<<<numBlocks, numThreads>>>(prefixRowIncr, prefixRowIncr, _gpuRowPtr, (dim + 1));
 
-//	printGpuArray(prefixRowIncr, (dim + 1), "-> new (future) rowPtr: ");
+	printGpuArray(prefixRowIncr, (dim + 1), "-> new (future) rowPtr: ");
 
 	int* prefixIndex1;
 	cudaMalloc((void**) &prefixIndex1, (dim + 1) * sizeof(int));
 	dev_ptr_prefix = thrust::device_pointer_cast(rowIncrIdx1);
 	dev_ptr_prefix_res = thrust::device_pointer_cast(prefixIndex1);
 	thrust::inclusive_scan(dev_ptr_prefix, dev_ptr_prefix + (dim + 1), dev_ptr_prefix_res);
+
+	CUDA_CHECK_ERROR()
 
 	numThreads = 32;
 	numBlocks = 1 + (dim / numThreads);
@@ -485,37 +497,49 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	thrust::device_ptr<int> dpIdx2 = thrust::device_pointer_cast(cleanedIdx2);
 	thrust::sort_by_key(dpIdx2, dpIdx2 + numSimilar, dpIdx1);
 
+	CUDA_CHECK_ERROR()
+
 	printf("Resorting...\n");
 	//printGpuArray(cleanedIdx1, numSimilar, "cleaned Idx1");
 	//printGpuArray(cleanedIdx2, numSimilar, "cleaned Idx2");
 
 	arrayAddKernel<<<numBlocks, numThreads>>>(_gpuRowPtr, prefixIndex1, _gpuRowPtr, dim + 1);
 
-//	printGpuArray(_gpuRowPtr, dim + 1, "\t Intermediate old RowPtr");
+	CUDA_CHECK_ERROR()
+
+	printGpuArray(_gpuRowPtr, dim + 1, "\t Intermediate old RowPtr");
+
+	CUDA_CHECK_ERROR()
 
 	dev_ptr_prefix = thrust::device_pointer_cast(rowIncrIdx2);
 	thrust::inclusive_scan(dev_ptr_prefix, dev_ptr_prefix + (dim + 1), dev_ptr_prefix_res);
 
+	CUDA_CHECK_ERROR()
+
 	doInsertionKernel<<<numBlocks, numThreads>>>(newColIdx, prefixRowIncr, _gpuRowPtr, cleanedIdx1, prefixIndex1, dim);
+
+	CUDA_CHECK_ERROR()
 
 	printGpuArray(newColIdx, sizeNewColIdx, "new ColIdx: ");
 
+	printGpuArray(prefixRowIncr, (dim + 1), "-> new (future) rowPtr: ");
+
 	num_similar += numSimilar;
-	cudaFree(_gpuColIdx);
-	_gpuColIdx = newColIdx;
-	cudaFree(_gpuRowPtr);
-	_gpuRowPtr = prefixRowIncr;
+	cudaFree(_gpuColIdx); CUDA_CHECK_ERROR()
+	cudaMalloc((void**) &_gpuColIdx, sizeNewColIdx*sizeof(int)); CUDA_CHECK_ERROR()
+	cudaMemcpy(_gpuColIdx, newColIdx, sizeNewColIdx*sizeof(int), cudaMemcpyDeviceToDevice); CUDA_CHECK_ERROR()
+	cudaMemcpy(_gpuRowPtr, prefixRowIncr, (dim+1)*sizeof(int), cudaMemcpyDeviceToDevice); CUDA_CHECK_ERROR()
 
-	cudaFree(rowData);
-	cudaFree(rowIncrIdx1);
-	cudaFree(rowIncrIdx2);
-	cudaFree(cleanedIdx1);
-	cudaFree(cleanedIdx2);
-	cudaFree(prefixSumResult);
-	cudaFree(prefixIndex1);
-	cudaFree(negativeIndx);
+	cudaFree(newColIdx); CUDA_CHECK_ERROR()
+
+	cudaFree(rowData);CUDA_CHECK_ERROR()
+	cudaFree(cleanedIdx1);CUDA_CHECK_ERROR()
+	cudaFree(cleanedIdx2);CUDA_CHECK_ERROR()
+	cudaFree(prefixSumResult);CUDA_CHECK_ERROR()
+	cudaFree(prefixIndex1);CUDA_CHECK_ERROR()
+	cudaFree(negativeIndx);CUDA_CHECK_ERROR()
 	free(negativeIdxHost);
-
+	CUDA_CHECK_ERROR()
 
 	if (true)
 	{
@@ -525,8 +549,8 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 		printGpuArray(_gpuRowPtr, dim + 1, "rowPtr");
 		printGpuArray(_gpuDiagPos, dim, "diagPos");
 		printGpuArray(_gpuDegrees, dim, "degrees");
-		getValueArr(true);
-		getColumn(3);
+		//getValueArr(true);
+		//getColumn(3);
 		/**********************************/
 	}
 
@@ -635,14 +659,16 @@ float* GPUSparse::getColumn(int columnIdx) const
 	columnWriteKernel<<<numBlocks, numThreads>>>(_gpuColumn, _gpuColIdx, _gpuRowPtr, _gpuNumOnes, columnIdx, dim);
 
 	//test printing
-	if(true)
+	if(false)
 	{
 		cudaMemcpy(column, _gpuColumn, dim*sizeof(float), cudaMemcpyDeviceToHost);
 		printf("Column %i :", columnIdx);
 		Tester::printArrayFloat(column, dim);
 	}
 
-	return column;
+	delete[] column;
+
+	return _gpuColumn;
 }
 
 char* GPUSparse::getMatrAsArray()
@@ -731,8 +757,21 @@ void GPUSparse::printGpuArray(int * devPtr, const int size, std::string message)
 {
 	int* cpu = (int*) malloc(sizeof(int)*size);
 	cudaMemcpy(cpu, devPtr, size*sizeof(int), cudaMemcpyDeviceToHost);
+	CUDA_CHECK_ERROR()
 
 	std::cout << message << " : ";
 	Tester::printArrayInt(cpu, size);
+	free(cpu);
 
+}
+
+void GPUSparse::printGpuArrayF(float * devPtr, const int size, std::string message)
+{
+	float* cpu = (float*) malloc(sizeof(float)*size);
+	cudaMemcpy(cpu, devPtr, size*sizeof(float), cudaMemcpyDeviceToHost);
+	CUDA_CHECK_ERROR()
+
+	std::cout << message << " : ";
+	Tester::printArrayFloat(cpu, size);
+	free(cpu);
 }

@@ -13,6 +13,7 @@
 #include "CMEstimatorGPUSorted.h"
 #include "CMEstimatorGPUApprox.h"
 #include "CMEstimatorGPUSparse.h"
+#include "Initializer.h"
 #include "ImageHandler.h"
 #include <iostream>
 #include <stdlib.h>
@@ -29,14 +30,17 @@ int main(int argc, char** argv)
 	//computation handlers//
 	////////////////////////
 	MatrixHandler* T;
+	Initializer* init = new Initializer();
 	//CMEstimator* CME = new CMEstimatorCPU();
     //CMEstimator* CME = new CMEstimatorGPUSorted();
-	CMEstimator* CME = new CMEstimatorGPUApprox();
-	//CMEstimator* CME = new CMEstimatorGPUSparse();
-	ImageComparator* comparator = new CPUComparator();
+	//CMEstimator* CME = new CMEstimatorGPUApprox();
+	CMEstimator* CME = new CMEstimatorGPUSparse();
 	ImageHandler* iHandler = new ImageHandler(dir);
 
-	//iHandler->fillWithEmptyImages(5);
+	ImageComparator* comparator = new CPUComparator();
+
+
+	iHandler->fillWithEmptyImages(20);
 
 	printf("Directory %s with %i files initialized.\n", dir, iHandler->getTotalNr());
 
@@ -66,25 +70,23 @@ int main(int argc, char** argv)
 			////////////////////
 			//Initialize Phase//
 			////////////////////
-
-			/*
 			T = new GPUSparse(dim, lambda); //empty Matrix (test = false)
+			/*
 			T->set(0,1, true);
 			T->set(2,3, true);
 			T->set(2,4, true);
-
 			T->set(0,3, false);
-			//T->set(2,4, false);
-
-			dynamic_cast<GPUSparse*> ( T )->updateSparseStatus();
-
+			*/
+			//Test initialization of T-Matrix
+			init->doInitializationPhase(T, iHandler, comparator, 20);
+			printf("Initialization of T done \n");
 
 			//Test cula & kbest indices
-			kBest = 3;
+			kBest = 10;
 			Indices* bestIndices = CME->getKBestConfMeasures(T, NULL, kBest);
 
 			exit (EXIT_FAILURE);
-			*/
+
 
 			T = new CPUImpl(dim, lambda); //empty Matrix (test = false)
 			//std::cout << "Init T:\n"<< std::endl;

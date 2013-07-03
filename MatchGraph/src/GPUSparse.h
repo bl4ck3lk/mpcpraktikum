@@ -69,6 +69,8 @@ public:
 
 	static int* prefixSumGPU(int* result, const int* array, const int dimension);
 	static void printGpuArray(int* devPtr, const int size, const std::string message);
+	static void printGpuArrayF(float* devPtr, const int size, const std::string message);
 };
 
 #endif /* GPUSPARSE_H_ */
+
