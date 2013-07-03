@@ -28,17 +28,10 @@ private:
 
 	bool firstInitMode;
 
-	int* colIdx;
-	int* rowPtr;
-	int* degrees;
-	int* diagPos; //position of diagonal elements within row
-	
+	int* _gpuDiagPos; //position of diagonal elements within row
+	int* _gpuDegrees;
 	int* _gpuRowPtr;
 	int* _gpuColIdx;
-
-	myElemMap newElemMap;
-	int numNewSimilar;
-	int numNewDiagonal;
 	
 	myElemMap dissimilarMap;
 	
@@ -51,7 +44,8 @@ private:
 public:
 	GPUSparse();
 	GPUSparse(unsigned int _dim, float _lambda);
-	void updateSparseStatus(); //TODO later private?
+	void updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k);
+	void handleDissimilar(int* idxData, int num);
 
 	~GPUSparse();
 	void set(int i, int j, bool val);
