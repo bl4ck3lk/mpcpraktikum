@@ -81,21 +81,30 @@ static __global__ void swapUpperDiagonal(int* idx1, int* idx2, int dim)
 }
 
 //check for symmetric entries (duplicates caused by swapping earlier)
-static __global__ void checkForDuplicates(int* idx1, int* idx2, int dim)
+static __global__ void checkForDuplicates(int* idx1, int* idx2, int size, int dim)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < (dim-1))
+	if (idx < (size-1))
 	{
-		int compareIdx = idx2[idx];
-		for(int j = idx+1; j < dim && idx1[idx] == idx1[j]; j++)
+		if (idx1[idx] == idx2[idx]) //diagonal element (can not occur twice)
 		{
-			if (compareIdx == idx2[j])
+			//mask out
+			idx1[idx] = dim+1;
+			idx2[idx] = dim+1;
+		}
+		else
+		{
+			int compareIdx = idx2[idx];
+			for(int j = idx+1; j < size && idx1[idx] == idx1[j]; j++)
 			{
-				//mask out
-				idx1[idx] = dim+1;
-				idx2[idx] = dim+1;
-				break; //only one duplicate possible
+				if (compareIdx == idx2[j])
+				{
+					//mask out
+					idx1[idx] = dim+1;
+					idx2[idx] = dim+1;
+					break; //only one duplicate possible
+				}
 			}
 		}
 	}
@@ -197,7 +206,7 @@ void Initializer::doInitializationPhase(MatrixHandler* T, ImageHandler* iHandler
 	*/
 
 	//check for duplicated enries and maks them out
-	checkForDuplicates<<<blockGrid, threadBlock>>>(d_initIdx1, d_initIdx2, initArraySize);
+	checkForDuplicates<<<blockGrid, threadBlock>>>(d_initIdx1, d_initIdx2, initArraySize, T->getDimension());
 	CUDA_CHECK_ERROR();
 
 	//todo remove debug printing
