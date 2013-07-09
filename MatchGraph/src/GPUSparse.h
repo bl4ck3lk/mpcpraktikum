@@ -20,10 +20,6 @@ private:
 	const unsigned int dim;
 	const float lambda;
 	unsigned int num_similar; //# of similarities that is (number of 1s / 2)
-	unsigned int num_dissimilar; //# of dissimilarities that is (number of -1s / 2)
-	unsigned int nnz_rows; // # of rows having non-zero elements
-
-	bool firstInitMode;
 
 	int* _gpuDiagPos; //position of diagonal elements within row
 	int* _gpuDegrees;

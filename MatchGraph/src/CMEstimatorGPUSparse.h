@@ -41,13 +41,10 @@ private:
 	int* res; //todo only for testing purpose
 
 	/* cula */
-	culaSparseHandle handle;
-	culaSparsePlan plan;
-	culaSparseConfig config;
 
 	Indices* getKBestConfMeasures(float* xColumnDevice, float* bColumnDevice, int columnIdx, int dim, int kBest);
 	int determineBestConfMeasures(float* xColumnDevice, float* bColumnDevice, int columnIdx, int dim, int kBest, int kBestForThisColumn, int currIndexNr);
-	void computeConfidenceMeasure(culaSparseHandle handle, culaSparsePlan plan, culaSparseConfig config, unsigned int dim, unsigned int nnz, float* A, int* rowPtr, int* colIdx, float* x, float* b);
+	culaSparseStatus computeConfidenceMeasure(culaSparseHandle handle, culaSparsePlan plan, culaSparseConfig config, unsigned int dim, unsigned int nnz, float* A, int* rowPtr, int* colIdx, float* x, float* b);
 	void initIdxDevicePointers(int size, unsigned int dim);
 	void initCula();
 };

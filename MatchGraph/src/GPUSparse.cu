@@ -62,7 +62,7 @@ __global__ void scatterDiagonalKernel(float* gpuValues, int* gpuRowPtr,
 	}
 }
 /***************************************************************************************/
-/***************************************************************************************/
+/*********************************PREFIX SUM KERNELS************************************/
 
 //mode = 0 => dont save sum of each block (to use the same kernel for addition of sumOfBlocks)
 //mode = 1 => save sum of each block
@@ -262,7 +262,7 @@ __global__ void updateDiagPosKernel(int* diagPos, int* idx1, int* idx2, int size
 	}
 }
 
-//FIXME make use of more blocks? Shared memory...
+//TODO make use of more blocks? Shared memory...
 __global__ void columnWriteKernel(float* dst, int* colIdx, int* rowPtr, int* numOnes, int col, int dim)
 {
 	int tIdx = threadIdx.x + blockDim.x * blockIdx.x;
@@ -275,7 +275,8 @@ __global__ void columnWriteKernel(float* dst, int* colIdx, int* rowPtr, int* num
 
 	for(int i = tIdx; i < numOnes[0] && i < dim; i+=blockDim.x)
 	{
-		dst[colIdx[rowPtr[col+i]]] = 1.0;
+		const int idx_in_colIdx = rowPtr[col]+i;
+		dst[colIdx[idx_in_colIdx]] = 1.0;
 	}
 
 	__syncthreads();
@@ -294,10 +295,7 @@ __global__ void columnWriteKernel(float* dst, int* colIdx, int* rowPtr, int* num
 GPUSparse::GPUSparse(unsigned int _dim, float _lambda) :
 		dim(_dim), lambda(_lambda)
 {
-	firstInitMode = true;
-	num_dissimilar = 0;
 	num_similar = 0;
-	nnz_rows = 0;
 
 	cudaMalloc((void**) &_gpuRowPtr, (dim+1)*sizeof(int));
 	cudaMalloc((void**) &_gpuColIdx, dim*sizeof(int));
@@ -309,14 +307,17 @@ GPUSparse::GPUSparse(unsigned int _dim, float _lambda) :
 	initColIdxRowPtrKernel<<<numBlocks, numThreads>>>(_gpuColIdx, _gpuRowPtr, dim);
 	initKernel<<<numBlocks, numThreads>>>(_gpuDegrees, 0, dim);
 	initKernel<<<numBlocks, numThreads>>>(_gpuDiagPos, 0, dim);
-	nnz_rows = dim;
 }
 
 GPUSparse::~GPUSparse()
 {
-
+	cudaFree(_gpuColIdx);
+	cudaFree(_gpuRowPtr);
+	cudaFree(_gpuDegrees);
+	cudaFree(_gpuDiagPos);
 }
 
+//TODO host thread ?!
 void GPUSparse::handleDissimilar(int* idxData, int num)
 {
 	for(int i = 0; i < num*2; i+=2)
@@ -326,6 +327,8 @@ void GPUSparse::handleDissimilar(int* idxData, int num)
 
 		if(col > dim)
 			break;
+		if(col == dim) //avoid diagonal... //TODO maybe check not necessary
+			continue;
 
 		addDissimilarToColumn(col, row);
 		addDissimilarToColumn(row, col);
@@ -344,11 +347,11 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 
 	if (verbose)
 	{
-		printf("Current Matrix:\n");
-		printGpuArray(_gpuColIdx, getNNZ(), "colIdx");
-		printGpuArray(_gpuRowPtr, dim + 1, "rowPtr");
-		printGpuArray(_gpuDiagPos, dim, "diagPos");
-		printGpuArray(_gpuDegrees, dim, "degrees");
+//		printf("Current Matrix:\n");
+//		printGpuArray(_gpuColIdx, getNNZ(), "colIdx");
+//		printGpuArray(_gpuRowPtr, dim + 1, "rowPtr");
+//		printGpuArray(_gpuDiagPos, dim, "diagPos");
+//		printGpuArray(_gpuDegrees, dim, "degrees");
 		printf("New Input:\n");
 		printGpuArray(idx1, k, "idx1");
 		printGpuArray(idx2, k, "idx2");
@@ -360,15 +363,28 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	int numBlocks;
 
 	int* prefixSumResult;
-	cudaMalloc((void**) &prefixSumResult, (1 + k) * sizeof(int));
+	cudaMalloc((void**) &prefixSumResult, (k) * sizeof(int));
 	thrust::device_ptr<int> dev_ptr_prefix_res = thrust::device_pointer_cast(prefixSumResult);
 	thrust::device_ptr<int> dev_ptr_prefix = thrust::device_pointer_cast(res);
-	thrust::exclusive_scan(dev_ptr_prefix, dev_ptr_prefix + k + 1, dev_ptr_prefix_res);
+	thrust::exclusive_scan(dev_ptr_prefix, dev_ptr_prefix + k, dev_ptr_prefix_res);
 
-//	printGpuArray(prefixSumResult, k + 1, "prefix result");
+	
+	CUDA_CHECK_ERROR()
+
+// 	printGpuArray(prefixSumResult, k, "prefix result");
+	
+	//TODO move numSimilar computation to GPU, directly in kernel with argument?
 
 	int numSimilar;
-	cudaMemcpy(&numSimilar, prefixSumResult + k, sizeof(int), cudaMemcpyDeviceToHost);
+	int lastResVal;
+	cudaMemcpy(&numSimilar, prefixSumResult + (k-1), sizeof(int), cudaMemcpyDeviceToHost);
+	cudaMemcpy(&lastResVal, res + (k-1), sizeof(int), cudaMemcpyDeviceToHost);
+
+	if(lastResVal == 1)
+		numSimilar++;
+
+//	printf("numSimilar = %i \n", numSimilar);
+
 	int* cleanedIdx;
 	int* negativeIndx;
 	cudaMalloc((void**) &cleanedIdx, numSimilar * 2 * sizeof(int));
@@ -376,10 +392,14 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	int* cleanedIdx1 = cleanedIdx;
 	int* cleanedIdx2 = cleanedIdx + numSimilar;
 
+	CUDA_CHECK_ERROR()
+	
 	numThreads = 32;
 	numBlocks = 1 + (k / numThreads);
 	cleanIndexArrays<<<numBlocks, numThreads>>>(cleanedIdx1, cleanedIdx2, negativeIndx, idx1, idx2, res, prefixSumResult, k);
 
+	cudaFree(prefixSumResult);
+	
 //	printGpuArray(cleanedIdx1, numSimilar, "cleaned Idx1");
 //	printGpuArray(cleanedIdx2, numSimilar, "cleaned Idx2");
 //	printGpuArray(negativeIndx, 2*(k-numSimilar), "negativeIdx");
@@ -387,7 +407,9 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	//Handling dissimilar results
 	int* negativeIdxHost = (int*) malloc((2*(k - numSimilar))*sizeof(int));
 	cudaMemcpy(negativeIdxHost, negativeIndx, (2*(k - numSimilar))*sizeof(int), cudaMemcpyDeviceToHost);
+	cudaFree(negativeIndx);
 	handleDissimilar(negativeIdxHost, k-numSimilar);
+	
 
 	k = numSimilar;
 	int* rowData;
@@ -432,22 +454,28 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	numBlocks = dim;
 	initKernel<<<256, 256>>>(newColIdx, dim + 1, sizeNewColIdx);
 	colIdxIncrementKernel<<<numBlocks, numThreads>>>(newColIdx, _gpuColIdx, _gpuRowPtr, prefixRowIncr, dim);
+	
+	CUDA_CHECK_ERROR()
 
 //	printGpuArray(newColIdx, sizeNewColIdx, "new ColIdx: ");
 
 	arrayAddKernel<<<numBlocks, numThreads>>>(prefixRowIncr, prefixRowIncr, _gpuRowPtr, (dim + 1));
-
+	CUDA_CHECK_ERROR()
+	
 //	printGpuArray(prefixRowIncr, (dim + 1), "-> new (future) rowPtr: ");
 
 	dev_ptr_prefix = thrust::device_pointer_cast(rowIncrIdx1);
 	dev_ptr_prefix_res = thrust::device_pointer_cast(prefixIndex1);
 	thrust::inclusive_scan(dev_ptr_prefix, dev_ptr_prefix + (dim + 1), dev_ptr_prefix_res);
-
+	CUDA_CHECK_ERROR()
+	
 	numThreads = 32;
 	numBlocks = 1 + (dim / numThreads);
 	doInsertionKernel<<<numBlocks, numThreads>>>(newColIdx, prefixRowIncr, _gpuRowPtr, cleanedIdx2, prefixIndex1, dim);
+	
+	CUDA_CHECK_ERROR()
 
-	printGpuArray(newColIdx, sizeNewColIdx, "new ColIdx: ");
+//	printGpuArray(newColIdx, sizeNewColIdx, "new ColIdx: ");
 
 	thrust::device_ptr<int> dpIdx1 = thrust::device_pointer_cast(cleanedIdx1);
 	thrust::device_ptr<int> dpIdx2 = thrust::device_pointer_cast(cleanedIdx2);
@@ -470,7 +498,6 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 
 	num_similar += numSimilar;
 
-	//TODO just pointer switch instead of copy deviceToDevice
 	cudaFree(_gpuColIdx);
 	_gpuColIdx = newColIdx;
 	cudaFree(_gpuRowPtr);
@@ -478,8 +505,9 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 
 	cudaFree(rowData);
 	cudaFree(cleanedIdx);
-	cudaFree(prefixSumResult);
-	cudaFree(negativeIndx);
+	//cudaFree(prefixSumResult);
+	//cudaFree(negativeIndx);
+	
 	free(negativeIdxHost);
 
 	if (verbose)
@@ -587,7 +615,6 @@ float* GPUSparse::getColumn(int columnIdx) const
 		{
 			int idx = (*lIter);
 			column[idx] = -1.0f;
-//			printf("-1.0 at %i \n", idx);
 		}
 	}
 
@@ -622,7 +649,8 @@ char* GPUSparse::getMatrAsArray()
 
 char GPUSparse::getVal(int i, int j)
 {
-	return 'c'; //TODO
+	printf("ERROR: getVal(int, int) to get a single value not supported by SPARSE Matrix \n");
+	return -1;
 }
 
 int GPUSparse::getSimilarities()
@@ -666,7 +694,7 @@ int* GPUSparse::getColIdxDevice() const
 
 unsigned int GPUSparse::getNNZ() const
 {
-	return num_similar * 2 + nnz_rows;
+	return num_similar * 2 + dim;
 }
 
 int* GPUSparse::prefixSumGPU(int* result, const int* array, const int dimension)
