@@ -12,11 +12,8 @@
 #include "CMEstimator.h"
 #include "ImageHandler.h"
 
-//TODO probably needs imageHandler or some knowledge of actual image data
-
 class ImageComparator {
 public:
-	virtual void doComparison(ImageHandler* iHandler, MatrixHandler* T, int k, Indices* kBestIndices) = 0;
 	virtual void doComparison(ImageHandler* iHandler, MatrixHandler* T, int* d_idx1, int* d_idx2, int* d_res, int arraySize) = 0;
 	virtual ~ImageComparator(){};
 };

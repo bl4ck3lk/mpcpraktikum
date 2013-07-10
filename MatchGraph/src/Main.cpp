@@ -71,6 +71,7 @@ int main(int argc, char** argv)
 			////////////////////
 			//Initialize Phase//
 			////////////////////
+			printf("Initializing Matrix.\n");
 			T = new GPUSparse(dim, lambda); //empty Matrix (test = false)
 			T_sparse = dynamic_cast<GPUSparse*> (T);
 			init->doInitializationPhase(T, iHandler, comparator, sizeOfInitIndicesList);
