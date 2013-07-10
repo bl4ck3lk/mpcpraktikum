@@ -13,44 +13,46 @@
 #include "CMEstimatorGPUSorted.h"
 #include "CMEstimatorGPUApprox.h"
 #include "CMEstimatorGPUSparse.h"
+#include "Initializer.h"
 #include "ImageHandler.h"
+#include "Tester.h"
 #include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
-
-#define TESTMATRIX 0 //to enable test matrix, one has to set the test bool in T->init to true
+#include <helper_cuda.h>
 
 int main(int argc, char** argv)
 {
 	//const char* dir = "../resource/notre_dame_40"; //TODO use input-parameter
 	const char* dir = "/graphics/projects/data/photoDB_fromWWW/photoCollections/Flickr/A/aachen";
 
+	//Initialize Cuda device
+	findCudaDevice(argc, (const char **)argv);
+
 	////////////////////////
-	//computation handlers//
+	//Computation handlers//
 	////////////////////////
 	MatrixHandler* T;
+	GPUSparse* T_sparse;
+	Initializer* init = new Initializer();
 	//CMEstimator* CME = new CMEstimatorCPU();
     //CMEstimator* CME = new CMEstimatorGPUSorted();
-	CMEstimator* CME = new CMEstimatorGPUApprox();
-	//CMEstimator* CME = new CMEstimatorGPUSparse();
-	ImageComparator* comparator = new CPUComparator();
+	//CMEstimator* CME = new CMEstimatorGPUApprox();
+	CMEstimator* CME = new CMEstimatorGPUSparse();
+	CMEstimatorGPUSparse* CME_sparse = dynamic_cast<CMEstimatorGPUSparse*> (CME);
 	ImageHandler* iHandler = new ImageHandler(dir);
+	ImageComparator* comparator = new CPUComparator();
 
-	//iHandler->fillWithEmptyImages(5);
 
+	iHandler->fillWithEmptyImages(50); //todo remove me. for testing purpose
 	printf("Directory %s with %i files initialized.\n", dir, iHandler->getTotalNr());
 
 	////////////
 	//Settings//
 	////////////
 	int dim			= iHandler->getTotalNr();
-#if TESTMATRIX
-	dim	 		= 10;
-#endif
 
-	const int MAX_INIT_ITERATIONS 	= dim;//(dim*(dim-1))/2; //#elements in upper diagonal matrix
-	const int MIN_INIT_SIMILARITIES = 2*dim;
-	int sizeOfInitIndicesList 		= 30;
+	int sizeOfInitIndicesList 		= 15; //todo make this dependent from dim (exponential)
 
 	float lambda 	= 1.0;
 	int iterations 	= 4;
@@ -66,72 +68,35 @@ int main(int argc, char** argv)
 			////////////////////
 			//Initialize Phase//
 			////////////////////
-
-			/*
 			T = new GPUSparse(dim, lambda); //empty Matrix (test = false)
-			T->set(0,1, true);
-			T->set(2,3, true);
-			T->set(2,4, true);
-
-			T->set(0,3, false);
-			//T->set(2,4, false);
-
-			dynamic_cast<GPUSparse*> ( T )->updateSparseStatus();
-
-
-			//Test cula & kbest indices
-			kBest = 3;
-			Indices* bestIndices = CME->getKBestConfMeasures(T, NULL, kBest);
-
-			exit (EXIT_FAILURE);
-			*/
-
-			T = new CPUImpl(dim, lambda); //empty Matrix (test = false)
-			//std::cout << "Init T:\n"<< std::endl;
-			//T->print();
-
-#if !TESTMATRIX
-			int c = 0;
-			//Initialization matrix should contain sufficient similarities
-			while(MIN_INIT_SIMILARITIES >  T->getSimilarities()  && MAX_INIT_ITERATIONS > c)
-			{
-				printf("similar %d \n", T->getSimilarities());
-
-				//get random indices for initialization
-				Indices* initIndices = CME->getInitializationIndices(T, sizeOfInitIndicesList);
-
-				//compare these images
-				comparator->doComparison(iHandler, T, sizeOfInitIndicesList, initIndices);
-
-				c++;
-			}
-
-			if (c != MAX_INIT_ITERATIONS) printf("Enough similarities found.\n");
-			else printf("Maximum initialization iterations reached w/o enough similarities.\n");
-#endif
-			printf("Initialization complete. T:\n");
-			//T->print();
+			T_sparse = dynamic_cast<GPUSparse*> (T);
+			init->doInitializationPhase(T, iHandler, comparator, sizeOfInitIndicesList);
+			printf("Initialization of T done. \n");
 		}
 
 		/////////////////////////
 		//Iterative progression//
 		/////////////////////////
+		printf("************** Iteration %i **************\n", i);
 
-		//compute confidence measure matrix
-		float* f = T->getConfMatrixF();
+		//get the next images that should be compared (implicitly solving eq. system => confidence measure matrix)
+		CME_sparse->getKBestConfMeasuresSparse(T, NULL, kBest);
 
-		//determine the k-best values in confidence measure matrix
-		Indices* bestIndices = CME->getKBestConfMeasures(T, f, kBest);
+		//compare images which are located in the device arrays of CME_sparse
+		int* testResult = CME_sparse->getResHostPtr(kBest); //todo remove me. for testing purpose only.
+		comparator->doComparison(iHandler, T, CME_sparse->getIdx1HostPtr(kBest), CME_sparse->getIdx2DevicePtr(), testResult, kBest);
+		CME_sparse->setResDevicePtr(testResult, kBest); //todo remove me. for testing purpose only.
 
-		//compare k-best image pairs and update T-matrix respectively
-	    comparator->doComparison(iHandler, T, kBest, bestIndices);
-
-		//std::cout << "T_" << i << ":\n" << std::endl;
-		//T->print();
+		//update matrix with new information (compared images)
+		T_sparse->updateSparseStatus(CME_sparse->getIdx1DevicePtr(), CME_sparse->getIdx2DevicePtr(), CME_sparse->getResDevicePtr(), kBest);
 	}
 
-	std::cout << "Resulting Matrix:\n" << std::endl;
+	printf("Resulting Matrix:\n");
 	T->print();
+
+	//cleanup
+	delete T_sparse;
+	delete CME_sparse;
 
 	return 0;
 }
