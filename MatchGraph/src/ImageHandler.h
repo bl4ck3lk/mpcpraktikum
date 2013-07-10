@@ -14,7 +14,7 @@
 class ImageHandler
 {
 	public:
-		ImageHandler(const char* imgDir); //constructor
+		ImageHandler(const char* imgDir, const char* imageExtension); //constructor
 		~ImageHandler(); //destructor
 		const char* getImage(int img); //get specific image
 		const char* getFullImagePath(int img);

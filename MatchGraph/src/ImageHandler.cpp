@@ -17,7 +17,7 @@
 #include <dirent.h>
 
 //constructor
-ImageHandler::ImageHandler(const char* imgDir)
+ImageHandler::ImageHandler(const char* imgDir, const char* imageExtension)
 	: nrImages(0), directory(imgDir)
 {
 	//construct map based on image directory and count images
@@ -26,6 +26,9 @@ ImageHandler::ImageHandler(const char* imgDir)
     
     //open directory 
     dirHandle = opendir(imgDir); 
+
+    //extension length
+    int extensionLength = strlen(imageExtension);
      
     if (dirHandle != NULL) 
     { 
@@ -33,9 +36,11 @@ ImageHandler::ImageHandler(const char* imgDir)
         while ((dirEntry = readdir(dirHandle)) != NULL)
         { 
         	char* entry = (char*)dirEntry->d_name;
-			if (strcmp(entry,".") != 0 && strcmp(entry,"..") != 0 && dirEntry->d_type == DT_REG)
+        	//ensure imageExtension is at the end of the file name
+        	int entryLength = strlen(entry);
+			if (strcmp(entry,".") != 0 && strcmp(entry,"..") != 0 && strstr(entry + (entryLength-extensionLength), imageExtension) != NULL && dirEntry->d_type == DT_REG)
 			{
-				images.insert(std::pair<int,std::string>(nrImages++, dirEntry->d_name));
+				images.insert(std::pair<int,std::string>(nrImages++, entry));
 			}
         }
         //done 
