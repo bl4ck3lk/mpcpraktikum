@@ -13,6 +13,7 @@
 #include <map>
 #include <string>
 
+
 typedef std::map<int,std::set<int> > myElemMap;
 
 class GPUSparse : public MatrixHandler{
@@ -50,7 +51,11 @@ public:
 
 	/* SPARSE-specific */
 	float* getValueArr(bool gpuPointer) const;
+	double* getValueArrDouble(bool gpuPointer) const;
+
 	float* getColumn(int i) const;
+	double* getColumnDouble(int i) const;
+
 	int* getColIdx() const;
 	int* getColIdxDevice() const;
 	int* getRowPtr() const;
@@ -61,6 +66,10 @@ public:
 	static int* prefixSumGPU(int* result, const int* array, const int dimension);
 	static void printGpuArray(int* devPtr, const int size, const std::string message);
 	static void printGpuArrayF(float* devPtr, const int size, const std::string message);
+	static void printGpuArrayD(double * devPtr, const int size, std::string message);
+	static int* downloadGPUArrayInt(int* devPtr, const int size);
+	static float* downloadGPUArrayFloat(float* devPtr, const int size);
+	static double* downloadGPUArrayDouble(double* devPtr, const int size);
 };
 
 #endif /* GPUSPARSE_H_ */

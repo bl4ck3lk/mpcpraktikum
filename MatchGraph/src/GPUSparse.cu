@@ -31,6 +31,8 @@ if (cudaSuccess != err) {						\
 }
 
 __device__ __constant__ float lambda_times_dim;
+__device__ __constant__ double lambda_times_dim_double;
+
 
 /***************************************************************************************/
 /**************** KERNELS TO GET THE VALUE ARRAY ***************************************/
@@ -58,6 +60,34 @@ __global__ void scatterDiagonalKernel(float* gpuValues, int* gpuRowPtr,
 		int row = i;
 		const int valueIndex = gpuRowPtr[row] + gpuDiagPos[row];
 		const float valToWrite = 1 + (lambda_times_dim * gpuDegrees[row]);
+		gpuValues[valueIndex] = valToWrite;
+	}
+}
+
+__global__ void scatterKernelDouble(double* dst, int num)
+{
+	//number of this thread
+	unsigned int i = threadIdx.x + blockDim.x * blockIdx.x;
+
+	for(int pos = i; pos < num; pos += blockDim.x)
+	{
+		dst[pos] = (-1)*lambda_times_dim_double;
+	}
+	//TODO split into a known number of blocks, let each thread write one number
+
+}
+
+__global__ void scatterDiagonalKernelDouble(double* gpuValues, int* gpuRowPtr,
+		int* gpuDegrees, int* gpuDiagPos, int dim)
+{
+	//number of this thread
+	unsigned int i = threadIdx.x + blockDim.x * blockIdx.x;
+
+	if(i < dim)
+	{
+		int row = i;
+		const int valueIndex = gpuRowPtr[row] + gpuDiagPos[row];
+		const double valToWrite = 1 + (lambda_times_dim_double * gpuDegrees[row]);
 		gpuValues[valueIndex] = valToWrite;
 	}
 }
@@ -292,6 +322,35 @@ __global__ void columnWriteKernel(float* dst, int* colIdx, int* rowPtr, int* num
 //	}
 }
 
+__global__ void columnWriteKernelDouble(double* dst, int* colIdx, int* rowPtr, int* numOnes, int col, int dim)
+{
+	int tIdx = threadIdx.x + blockDim.x * blockIdx.x;
+
+	if(tIdx == 0){
+		//put into 'shared' memory the amount of 1's of this column
+		numOnes[0] = rowPtr[col+1] - rowPtr[col];
+	}
+	__syncthreads();
+
+	for(int i = tIdx; i < numOnes[0] && i < dim; i+=blockDim.x)
+	{
+		const int idx_in_colIdx = rowPtr[col]+i;
+		dst[colIdx[idx_in_colIdx]] = 1.0;
+	}
+
+	__syncthreads();
+	if(tIdx == 0)
+	{
+		//diagonal to zero
+		dst[col] = 0.0;
+	}
+
+	//	if (tIdx < numOnes[0] && tIdx < dim)
+//	{
+//		dst[rowPtr[col+tIdx]] = 1.0;
+//	}
+}
+
 GPUSparse::GPUSparse(unsigned int _dim, float _lambda) :
 		dim(_dim), lambda(_lambda)
 {
@@ -344,6 +403,12 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	int* idx2 = _idx2;
 	int* res = _res;
 	int k = _k;
+
+	const int oldNNZ = getNNZ();
+
+	int* originalRowPtr; //TODO
+	cudaMalloc((void**) &originalRowPtr, (dim + 1) * sizeof(int));
+	cudaMemcpy(originalRowPtr, _gpuRowPtr, (dim + 1) * sizeof(int), cudaMemcpyDeviceToDevice);
 
 	if (verbose)
 	{
@@ -432,6 +497,8 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 //	printGpuArray(rowIncrIdx1, (dim + 1), "idx1 Incr");
 //	printGpuArray(rowIncrIdx2, (dim + 1), "idx2 Incr");
 
+	numThreads = 256;
+	numBlocks = 1 + ((dim+1)/numThreads);
 	arrayAddKernel<<<numBlocks, numThreads>>>(rowIncr, rowIncrIdx1, rowIncrIdx2, (dim + 1));
 
 	dev_ptr_prefix = thrust::device_pointer_cast(rowIncr);
@@ -439,7 +506,7 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	thrust::inclusive_scan(dev_ptr_prefix, dev_ptr_prefix + (dim + 1), dev_ptr_prefix_res);
 
 //	printGpuArray(rowIncr, (dim + 1), "total increment");
-//	printGpuArray(prefixRowIncr, (dim + 1), "prefix sum");
+//	printGpuArray(prefixRowIncr, (dim + 1), "prefixRowIncr ");
 
 	numThreads = 128;
 	numBlocks = 1 + (dim / numThreads);
@@ -457,8 +524,10 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	
 	CUDA_CHECK_ERROR()
 
-//	printGpuArray(newColIdx, sizeNewColIdx, "new ColIdx: ");
+//	printGpuArray(newColIdx, sizeNewColIdx, "new ColIdx(after colIdx increment): ");
 
+	numThreads = 256;
+	numBlocks = 1 + ((dim+1)/numThreads);
 	arrayAddKernel<<<numBlocks, numThreads>>>(prefixRowIncr, prefixRowIncr, _gpuRowPtr, (dim + 1));
 	CUDA_CHECK_ERROR()
 	
@@ -497,6 +566,12 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	CUDA_CHECK_ERROR()
 
 	num_similar += numSimilar;
+
+//	Tester::testCSRMatrixUpdate(downloadGPUArrayInt(originalRowPtr, dim+1), downloadGPUArrayInt(_gpuColIdx, oldNNZ), downloadGPUArrayInt(_gpuDegrees, dim),
+//								downloadGPUArrayInt(prefixRowIncr, dim+1), downloadGPUArrayInt(newColIdx, getNNZ()),
+//								downloadGPUArrayInt(idx1, _k), downloadGPUArrayInt(idx2,_k), downloadGPUArrayInt(res,_k), dissimilarMap, dim, _k);
+
+	cudaFree(originalRowPtr);
 
 	cudaFree(_gpuColIdx);
 	_gpuColIdx = newColIdx;
@@ -597,6 +672,54 @@ float* GPUSparse::getValueArr(bool gpuPointer) const
 		Tester::printArrayFloat(valuesCPU, nnz);
 	}
 
+
+
+	return gpuValues;
+}
+
+double* GPUSparse::getValueArrDouble(bool gpuPointer) const
+{
+	bool verbose = false;
+
+	int nnz = getNNZ();
+
+	double _cpuLambda_times_dim_double = dim * lambda; //FIXME do not compute each time
+	cudaMemcpyToSymbol(lambda_times_dim, &_cpuLambda_times_dim_double, sizeof(double));
+
+	double* gpuValues;
+	cudaMalloc((void**) &gpuValues, nnz * sizeof(double));
+	int NUM_THREADS = 512;
+	int NUM_BLOCKS = 1;
+	scatterKernelDouble<<<NUM_BLOCKS, NUM_THREADS>>>(gpuValues, nnz);
+
+	NUM_THREADS = 512;
+	NUM_BLOCKS = 1 + (dim / NUM_THREADS);
+	scatterDiagonalKernelDouble<<<NUM_BLOCKS, NUM_THREADS>>>(gpuValues, _gpuRowPtr, _gpuDegrees, _gpuDiagPos, dim);
+
+	if (!gpuPointer)
+	{
+		double* valuesCPU = (double*) malloc(nnz * sizeof(double));
+		cudaMemcpy(valuesCPU, gpuValues, nnz * sizeof(double), cudaMemcpyDeviceToHost);
+
+		cudaFree(gpuValues);;
+
+		return valuesCPU;
+	}
+
+	if (gpuPointer && verbose)
+	{
+		double* valuesCPU = (double*) malloc(nnz * sizeof(double));
+		cudaMemcpy(valuesCPU, gpuValues, nnz * sizeof(double), cudaMemcpyDeviceToHost);
+
+		printf("Value array: ");
+		Tester::printArrayDouble(valuesCPU, nnz);
+	}
+
+//	double* valuesCPU = (double*) malloc(nnz * sizeof(double));
+//				cudaMemcpy(valuesCPU, gpuValues, nnz * sizeof(double), cudaMemcpyDeviceToHost);
+//		Tester::testValueArray(downloadGPUArrayInt(_gpuRowPtr, dim+1), downloadGPUArrayInt(_gpuColIdx, nnz),downloadGPUArrayInt(_gpuDegrees, dim),
+//							dim, nnz, lambda, valuesCPU);
+
 	return gpuValues;
 }
 
@@ -628,12 +751,53 @@ float* GPUSparse::getColumn(int columnIdx) const
 	const int numBlocks = 1;
 	columnWriteKernel<<<numBlocks, numThreads>>>(_gpuColumn, _gpuColIdx, _gpuRowPtr, _gpuNumOnes, columnIdx, dim);
 
-	//test printing
+	//testing
+//	if(false)
+//	{
+//		cudaMemcpy(column, _gpuColumn, dim*sizeof(float), cudaMemcpyDeviceToHost);
+//		Tester::testColumn(dissimilarMap, downloadGPUArrayInt(_gpuRowPtr, dim+1), downloadGPUArrayInt(_gpuColIdx, getNNZ()),
+//					columnIdx, dim, column);
+//	}
+
+	delete[] column;
+
+	return _gpuColumn;
+}
+
+double* GPUSparse::getColumnDouble(int columnIdx) const
+{
+	double* column = new double[dim];
+	std::fill_n(column, dim, 0.0f);
+
+	myElemMap::const_iterator it = dissimilarMap.find(columnIdx);
+
+	if (it != dissimilarMap.end())
+	{
+		std::set<int> dis = it->second;
+		for (std::set<int>::const_iterator lIter = dis.begin();
+				lIter != dis.end(); ++lIter)
+		{
+			int idx = (*lIter);
+			column[idx] = -1.0f;
+		}
+	}
+
+	double* _gpuColumn;
+	cudaMalloc((void**) &_gpuColumn, dim*sizeof(double));
+	int* _gpuNumOnes;
+	cudaMalloc((void**) &_gpuNumOnes, sizeof(int));
+	cudaMemcpy(_gpuColumn, column, dim*sizeof(double), cudaMemcpyHostToDevice);
+
+	const int numThreads = 512;
+	const int numBlocks = 1;
+	columnWriteKernelDouble<<<numBlocks, numThreads>>>(_gpuColumn, _gpuColIdx, _gpuRowPtr, _gpuNumOnes, columnIdx, dim);
+
+	//testing
 	if(false)
 	{
-		cudaMemcpy(column, _gpuColumn, dim*sizeof(float), cudaMemcpyDeviceToHost);
-		printf("Column %i :", columnIdx);
-		Tester::printArrayFloat(column, dim);
+		cudaMemcpy(column, _gpuColumn, dim*sizeof(double), cudaMemcpyDeviceToHost);
+		Tester::testColumn(dissimilarMap, downloadGPUArrayInt(_gpuRowPtr, dim+1), downloadGPUArrayInt(_gpuColIdx, getNNZ()),
+					columnIdx, dim, column);
 	}
 
 	delete[] column;
@@ -744,4 +908,36 @@ void GPUSparse::printGpuArrayF(float * devPtr, const int size, std::string messa
 	std::cout << message << " : ";
 	Tester::printArrayFloat(cpu, size);
 	free(cpu);
+}
+
+void GPUSparse::printGpuArrayD(double * devPtr, const int size, std::string message)
+{
+	double* cpu = (double*) malloc(sizeof(double)*size);
+	cudaMemcpy(cpu, devPtr, size*sizeof(double), cudaMemcpyDeviceToHost);
+	CUDA_CHECK_ERROR()
+
+	std::cout << message << " : ";
+	Tester::printArrayDouble(cpu, size);
+	free(cpu);
+}
+
+int* GPUSparse::downloadGPUArrayInt(int* devPtr, const int size)
+{
+	int* cpu = (int*) malloc(sizeof(int)*size);
+	cudaMemcpy(cpu, devPtr, size*sizeof(int), cudaMemcpyDeviceToHost);
+	return cpu;
+}
+
+float* GPUSparse::downloadGPUArrayFloat(float* devPtr, const int size)
+{
+	float* cpu = (float*) malloc(sizeof(float)*size);
+	cudaMemcpy(cpu, devPtr, size*sizeof(float), cudaMemcpyDeviceToHost);
+	return cpu;
+}
+
+double* GPUSparse::downloadGPUArrayDouble(double* devPtr, const int size)
+{
+	double* cpu = (double*) malloc(sizeof(double)*size);
+	cudaMemcpy(cpu, devPtr, size*sizeof(double), cudaMemcpyDeviceToHost);
+	return cpu;
 }
