@@ -20,12 +20,17 @@
 #include <vector_types.h>
 #include <cuda.h>
 
+// Thrust stuff
+#include <vector_types.h>
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include <thrust/remove.h>
+// End Thrust stuff
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-void ratio_aux(const int2 * trainIdx1, int2 * trainIdx2,
-                            const float2 * distance1, const float2 * distance2);
+void ratio_aux(int2 * trainIdx1, float2 * distance1, const size_t size1);
 
 struct IMG {
     cv::gpu::GpuMat im_gpu;
@@ -57,8 +62,10 @@ int ComparatorCVGPU::compareGPU(std::string* images1, std::string* images2, int 
 		IMG& i1 = comparePairs.find(images1[i])->second;
 		IMG& i2 = comparePairs.find(images2[i])->second;
 		match2(i1.descriptors, i2.descriptors, symMatches);
+		std::cout << ".............." << std::endl;
 	}
-
+	//surf.releaseMemory();
+	// destroy device allocated data?
 	// download result?
 	// ransac??
 	return 1;
@@ -82,59 +89,52 @@ void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu,
 	
 	matcher.knnMatch(im1_descriptors_gpu, im2_descriptors_gpu, matches1, 2);
 	matcher.knnMatch(im2_descriptors_gpu, im1_descriptors_gpu, matches2, 2);
+	std::cout << "Number of matched points 1->2 (raw): " << matches1.size() << std::endl;
+	std::cout << "Number of matched points 2->1 (raw): " << matches2.size() << std::endl;
 
-/*
+	/*
 	GpuMat trainIdxMat1, distanceMat1, allDist1;
 	GpuMat trainIdxMat2, distanceMat2, allDist2;
 
+	// use stream?
 	matcher.knnMatchSingle(im1_descriptors_gpu, im2_descriptors_gpu, 
 				trainIdxMat1, distanceMat1, allDist1, 2);
 	matcher.knnMatchSingle(im2_descriptors_gpu, im1_descriptors_gpu, 
 				trainIdxMat2, distanceMat2, allDist2, 2);
-
+				
+	size_t N1 = trainIdxMat1.size().width;
+	size_t N2 = trainIdxMat2.size().width;
 	int2* trainIdx1 = trainIdxMat1.ptr<int2>();
 	float2* distance1 = distanceMat1.ptr<float2>();
+	
 	int2* trainIdx2 = trainIdxMat2.ptr<int2>();
 	float2* distance2 = distanceMat2.ptr<float2>();
 	
-    	std::cout << "Number of matched points 1->2 (trainIdxMat1):" << trainIdxMat1.size().width << std::endl;
-	std::cout << "Number of matched points 1->2 (trainIdxMat2): " << trainIdxMat2.size().width << std::endl;
+	ratio_aux(trainIdx1, distance1, N1);
+	ratio_aux(trainIdx2, distance2, N2);
 
-	std::cout << "Number of matched points 1->2 (matches1):" << matches1.size() << std::endl;
-	std::cout << "Number of matched points 1->2 (matches2): " << matches2.size() << std::endl;
-	//std::cout << "Number of matched points 2->1: " << allDist2.size << std::endl;
-    // invokes a cuda kernel to process the matches (testing)
-	ratio_aux(trainIdx1, trainIdx2,
-              distance1, distance2);
-
-	std::cout << "Kernel executed" << std::endl;
-*/
-	//TODO:idxs aus der GPU holen und testen, ob sie uebereinstimmen
-/*
-    for (unsigned int i = 0; i < im1_descriptors_gpu.size().width; ++i)
-    	{
-        //std::cout << "d " << p1 << std::endl;
-        //reference[i].x = idata[i].x - idata[i].y;
-        //reference[i].y = idata[i].y;
-    	}
- */   
-	//std::cout << "d " << trainIdx1[1].x << std::endl;
+	std::vector<std::vector< cv::DMatch> > convertedMatches1;
+	std::vector<std::vector< cv::DMatch> > convertedMatches2;
 	
-	//std::cout << "Number of matched points 1->2: " << matches1.size() << std::endl;
-	//std::cout << "Number of matched points 2->1: " << matches2.size() << std::endl;
-
+	matcher.knnMatchDownload(trainIdxMat1, distanceMat1, convertedMatches1);
+	matcher.knnMatchDownload(trainIdxMat2, distanceMat2, convertedMatches2);
+	std::cout << "convertedMatches1: " << convertedMatches1.size() << std::endl;
+	std::cout << "convertedMatches2: " << convertedMatches2.size() << std::endl;
+	*/
+	
 	// 3. Remove matches for which NN ratio is > than threshold
-	std::cout << "Number of matched points 1->2: " << matches1.size() << std::endl;
-	std::cout << "Number of matched points 2->1: " << matches2.size() << std::endl;
+
 	// clean image 1 -> image 2 matches
 	int removed = ratioTest(matches1);
+	std::cout << "Number of matched points 1->2 (cleaned): " << matches1.size() - removed << std::endl;
 	// clean image 2 -> image 1 matches
 	removed = ratioTest(matches2);
-	
+	std::cout << "Number of matched points 2->1 (cleaned): " << matches2.size() - removed << std::endl;
+
     // 4. Remove non-symmetrical matches
 	
 	symmetryTest(matches1,matches2,symMatches);
-
+	//symmetryTest(convertedMatches1,convertedMatches2,symMatches);
 	std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
 }
 
@@ -145,7 +145,7 @@ void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu,
 int ComparatorCVGPU::ratioTest(std::vector< std::vector<cv::DMatch> >& matches) {
 
 	int removed = 0;
-	float ratio = 0.85f;
+	float ratio = 0.85;
 
 	// for all matches
 	for (std::vector< std::vector<cv::DMatch> >::iterator matchIterator = matches.begin();
@@ -156,7 +156,7 @@ int ComparatorCVGPU::ratioTest(std::vector< std::vector<cv::DMatch> >& matches) 
 
 			//TODO: parallelize it
 			// check distance ratio
-			if ((*matchIterator)[0].distance/(*matchIterator)[1].distance > ratio) {
+			if (((*matchIterator)[0].distance/(*matchIterator)[1].distance) > ratio) {
 
 				matchIterator->clear(); // remove match
 				removed++;
@@ -181,16 +181,18 @@ void ComparatorCVGPU::symmetryTest(const std::vector< std::vector<cv::DMatch> >&
 	for (std::vector< std::vector<cv::DMatch> >::const_iterator matchIterator1= matches1.begin();
 			matchIterator1 != matches1.end(); ++matchIterator1) {
 
-		if (matchIterator1->size() < 2) // ignore deleted matches
+		if (matchIterator1->size() < 2) {// ignore deleted matches
+			//if ((*matchIterator1)[1].queryIdx > 0) printf("NULL");
 			continue;
-
+		}
+					
 		// for all matches image 2 -> image 1
 		for (std::vector< std::vector<cv::DMatch> >::const_iterator matchIterator2= matches2.begin();
 				matchIterator2!= matches2.end(); ++matchIterator2) {
-
-			if (matchIterator2->size() < 2) // ignore deleted matches
+					
+			if (matchIterator2->size() < 2) {// ignore deleted matches
 				continue;
-
+			}
 			// Match symmetry test
 			if ((*matchIterator1)[0].queryIdx == (*matchIterator2)[0].trainIdx  &&
 					(*matchIterator2)[0].queryIdx == (*matchIterator1)[0].trainIdx) {
@@ -283,7 +285,7 @@ cv::Mat ComparatorCVGPU::ransacTest(const std::vector<cv::DMatch>& matches,
 
 int main( int argc, char** argv )
 {
-	int k = 6;
+	int k = 12;
 	std::string images1[k];
 	images1[0] = "paris1.jpg";
 	images1[1] = "paris1.jpg";
@@ -291,7 +293,14 @@ int main( int argc, char** argv )
 	images1[3] = "House1.jpg";
 	images1[4] = "castle1.jpg";
 	images1[5] = "castle1.jpg";
-
+	images1[6] = "paris1.jpg";
+	images1[7] = "paris1.jpg";
+	images1[8] = "House1.jpg";
+	images1[9] = "House2.jpg";
+	images1[10] = "paris1.jpg";
+	images1[11] = "castle1.jpg";
+	
+	
 	std::string images2[k];
 	images2[0] = "paris2.jpg";
 	images2[1] = "House1.jpg";
@@ -299,6 +308,13 @@ int main( int argc, char** argv )
 	images2[3] = "castle1.jpg";
 	images2[4] = "castle2.jpg";
 	images2[5] = "paris2.jpg";
+	images2[6] = "paris1.jpg";
+	images2[7] = "castle1.jpg";
+	images2[8] = "paris2.jpg";
+	images2[9] = "castle1.jpg";
+	images2[10] = "castle2.jpg";
+	images2[11] = "paris2.jpg";
+	
 	ComparatorCVGPU comp;
 	int result = comp.compareGPU(images1, images2, k, true, false);
 	//int result = comp.compareGPU(argv[1], argv[2], true, false);
