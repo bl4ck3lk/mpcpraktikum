@@ -24,7 +24,10 @@
 int main(int argc, char** argv)
 {
 	//const char* dir = "../resource/notre_dame_40"; //TODO use input-parameter
-	const char* dir = "/graphics/projects/data/photoDB_fromWWW/photoCollections/Flickr/A/aachen";
+	//const char* dir = "/graphics/projects/data/photoDB_fromWWW/photoCollections/Flickr/A/aachen";
+	//const char* imgExension = ".jpg";
+	const char* dir = "/graphics/projects/data/canon_5d/2012_12_11_similar_pics";
+	const char* imgExension = ".ppm";
 
 	//Initialize Cuda device
 	findCudaDevice(argc, (const char **)argv);
@@ -40,11 +43,11 @@ int main(int argc, char** argv)
 	//CMEstimator* CME = new CMEstimatorGPUApprox();
 	CMEstimator* CME = new CMEstimatorGPUSparse();
 	CMEstimatorGPUSparse* CME_sparse = dynamic_cast<CMEstimatorGPUSparse*> (CME);
-	ImageHandler* iHandler = new ImageHandler(dir);
+	ImageHandler* iHandler = new ImageHandler(dir, imgExension);
 	ImageComparator* comparator = new CPUComparator();
 
 
-	iHandler->fillWithEmptyImages(50); //todo remove me. for testing purpose
+//	iHandler->fillWithEmptyImages(5000); //todo remove me. for testing purpose
 	printf("Directory %s with %i files initialized.\n", dir, iHandler->getTotalNr());
 
 	////////////
@@ -52,7 +55,7 @@ int main(int argc, char** argv)
 	////////////
 	int dim			= iHandler->getTotalNr();
 
-	int sizeOfInitIndicesList 		= 15; //todo make this dependent from dim (exponential)
+	int sizeOfInitIndicesList 		= 30; //todo make this dependent from dim (exponential)
 
 	float lambda 	= 1.0;
 	int iterations 	= 4;
@@ -83,9 +86,7 @@ int main(int argc, char** argv)
 		CME_sparse->getKBestConfMeasuresSparse(T, NULL, kBest);
 
 		//compare images which are located in the device arrays of CME_sparse
-		int* testResult = CME_sparse->getResHostPtr(kBest); //todo remove me. for testing purpose only.
-		comparator->doComparison(iHandler, T, CME_sparse->getIdx1HostPtr(kBest), CME_sparse->getIdx2DevicePtr(), testResult, kBest);
-		CME_sparse->setResDevicePtr(testResult, kBest); //todo remove me. for testing purpose only.
+		comparator->doComparison(iHandler, T, CME_sparse->getIdx1DevicePtr(), CME_sparse->getIdx2DevicePtr(), CME_sparse->getResDevicePtr(), kBest);
 
 		//update matrix with new information (compared images)
 		T_sparse->updateSparseStatus(CME_sparse->getIdx1DevicePtr(), CME_sparse->getIdx2DevicePtr(), CME_sparse->getResDevicePtr(), kBest);
