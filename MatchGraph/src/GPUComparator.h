@@ -17,6 +17,7 @@ public:
 	~GPUComparator();
 	//TODO destructor
 	void doComparison(ImageHandler* iHandler, MatrixHandler* T, int* d_idx1, int* d_idx2, int* d_res, int arraySize);
+	void setRandomMode(bool mode);
 
 private:
 	ComparatorCVGPU* openCVcomp;
@@ -27,6 +28,8 @@ private:
 	int currentArraySize;
 
 	void initArrays(int arraySize);
+
+	bool randomMode;
 };
 
 #endif /* GPUCOMPARATOR_H_ */

@@ -16,9 +16,11 @@ public:
 	CPUComparator();
 	virtual ~CPUComparator();
 	void doComparison(ImageHandler* iHandler, MatrixHandler* T, int* h_idx1, int* h_idx2, int* h_res, int arraySize);
+	void setRandomMode(bool mode);
 
 private:
 	Comparator_CPU* compCPU;
+	bool randomMode;
 };
 
 #endif /* CPUCOMPARATOR_H_ */

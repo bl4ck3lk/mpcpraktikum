@@ -41,11 +41,14 @@ void GPUComparator::initArrays(int arraySize)
 	h_res = new int[arraySize];
 }
 
+void GPUComparator::setRandomMode(bool mode)
+{
+	randomMode = mode;
+}
+
 void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* d_idx1, int* d_idx2, int* d_res, int arraySize)
 {
-	bool imageComparison = true; //disable image comparison for testing purpose
-
-	if (imageComparison)
+	if (!randomMode)
 	{
 		//OpenCV Image Comparison
 		if (arraySize != currentArraySize) initArrays(arraySize);

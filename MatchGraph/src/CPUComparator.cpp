@@ -20,11 +20,14 @@ CPUComparator::~CPUComparator()
 {
 }
 
+void CPUComparator::setRandomMode(bool mode)
+{
+	randomMode = mode;
+}
+
 void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* h_idx1, int* h_idx2, int* h_res, int arraySize)
 {
-	bool imageComparison = true; //disable image comparison for testing purpose
-
-	if (imageComparison)
+	if (!randomMode)
 	{
 		unsigned int dim = T->getDimension();
 
@@ -38,7 +41,7 @@ void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 			h_res[i] = res;
 		}
 	}
-	else
+	else //random mode: no image comparison for testing purpose
 	{
 		printf("No image comparison done. Result-array filled randomly.\n");
 		//random seed
