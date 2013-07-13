@@ -1,5 +1,5 @@
 /*
- * Initializer.cu
+ * InitializerGPU.cu
  *
  * Initializes a given directory by indexing all images within this directory
  * in a map such that the image-path can be obtained fast by the corresponding
@@ -10,7 +10,7 @@
  *      Author: schwarzk
  */
 
-#include "Initializer.h"
+#include "InitializerGPU.h"
 #include <iostream>
 #include <stdio.h>
 #include <time.h>
@@ -111,12 +111,12 @@ static __global__ void checkForDuplicates(int* idx1, int* idx2, int initArraySiz
 }
 
 
-Initializer::Initializer()
+InitializerGPU::InitializerGPU()
 {
 
 }
 
-Initializer::~Initializer()
+InitializerGPU::~InitializerGPU()
 {
 
 }
@@ -124,7 +124,7 @@ Initializer::~Initializer()
 /*
  * Initializes the T-Matrix with random image comparisons.
  */
-void Initializer::doInitializationPhase(MatrixHandler* T, ImageHandler* iHandler, ImageComparator* comparator, int initArraySize)
+void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHandler, ImageComparator* comparator, int initArraySize)
 {
 	bool debugPrint = false;
 

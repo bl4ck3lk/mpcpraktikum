@@ -12,6 +12,7 @@
 #include "CMEstimatorCPU.h"
 #include "CMEstimatorGPUSparse.h"
 #include "Initializer.h"
+#include "InitializerGPU.h"
 #include "ImageHandler.h"
 #include "Tester.h"
 #include <iostream>
@@ -60,15 +61,16 @@ int main(int argc, char** argv)
 	printf("Executing GPU Version.\n");
 	T = new GPUSparse(dim, lambda);
 	GPUSparse* T_sparse = dynamic_cast<GPUSparse*> (T);
-	init = new Initializer();
+	init = new InitializerGPU();
 	CME = new CMEstimatorGPUSparse();
 	comparator = new GPUComparator();
 #else
 	printf("Executing CPU Version.\n");
 	T = new CPUImpl(dim, lambda);
 	CPUImpl* T_cpu = dynamic_cast<CPUImpl*> (T);
+//	init = new InitializerCPU();
 	CME = new CMEstimatorCPU();
-//	comparator = new Comparator();
+//	comparator = new CPUComparator();
 #endif
 
 	/////////////////////////////////////////////////////////

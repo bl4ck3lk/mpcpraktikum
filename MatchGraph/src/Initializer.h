@@ -1,7 +1,7 @@
 /*
  * Initializer.h
  *
- *  Created on: Jun 29, 2013
+ *  Created on: Jul 13, 2013
  *      Author: schwarzk
  */
 
@@ -14,11 +14,8 @@
 
 class Initializer {
 public:
-	Initializer(); //constructor
-	~Initializer(); //destructor
-
-	/* for T Matrix initialization */
-	void doInitializationPhase(MatrixHandler* T, ImageHandler* iHandler, ImageComparator* comparator, int initAraySize);
+	virtual ~Initializer(){};
+	virtual void doInitializationPhase(MatrixHandler* T, ImageHandler* iHandler, ImageComparator* comparator, int initAraySize) = 0;
 };
 
 #endif /* INITIALIZER_H_ */
