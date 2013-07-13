@@ -122,8 +122,8 @@ void CPUImpl::set(int* idx1, int* idx2, int* res, int size)
 	{
 		int x = idx1[i];
 		int y = idx2[i];
-		printf("[%i,%i] = %i\n", x, y, res[i]);
 		m(x,y) = (res[i] == 1) ? 1 : -1;
+		m(y,x) = (res[i] == 1) ? 1 : -1;
 	}
 }
 

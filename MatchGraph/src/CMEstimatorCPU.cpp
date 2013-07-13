@@ -31,12 +31,17 @@ CMEstimatorCPU::~CMEstimatorCPU()
 void CMEstimatorCPU::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
 {
 	printf("Determine kBest confidence measures on CPU:\n");
+
+	bool debugPrint = false;
+
 	int dim = T->getDimension();
 
 	//initialize index arrays
 	if (currentArraySize != kBest) initIdxArrays(kBest, dim);
 
 	std::map<float, long> confMeasureWithIndex;
+	std::multimap<int, int> indices; //sorted by idx1 (multiple keys allowed)
+
 
 	/*
 	 * For loop only traverses the upper diagonal matrix without the diagonal elements.
@@ -58,15 +63,29 @@ void CMEstimatorCPU::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
 	}
 
 	int count = 0;
-	for (std::map<float, long>::reverse_iterator iter = confMeasureWithIndex.rbegin(); iter != confMeasureWithIndex.rend() && count < kBest; ++iter)
+	for (std::map<float, long>::reverse_iterator iter = confMeasureWithIndex.rbegin(); iter != confMeasureWithIndex.rend() && count < kBest; ++iter, count++)
 	{
-		idx1[count] = iter->second/dim;
-		idx2[count] = iter->second%dim;
-		count++;
+		indices.insert(std::pair<int, int>(iter->second/dim, iter->second%dim));
 	}
 
-	if (true) //debug print
+	if (debugPrint) //debug print
 	{
+		Tester::printArrayInt(idx1, kBest);
+		Tester::printArrayInt(idx2, kBest);
+		Tester::printArrayInt(res, kBest);
+	}
+
+	//sorted arrays
+	count = 0;
+	for (std::multimap<int, int>::iterator iter = indices.begin(); iter != indices.end(); ++iter, count++)
+	{
+		idx1[count] = iter->first;
+		idx2[count] = iter->second;
+	}
+
+	if (debugPrint) //debug print
+	{
+		printf("[ESTIMATOR]: sorted.\n");
 		Tester::printArrayInt(idx1, kBest);
 		Tester::printArrayInt(idx2, kBest);
 		Tester::printArrayInt(res, kBest);

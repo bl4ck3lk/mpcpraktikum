@@ -9,10 +9,12 @@
 #include "GPUMatrix.h"
 #include "CPUImpl.h"
 #include "GPUComparator.h"
+#include "CPUComparator.h"
 #include "CMEstimatorCPU.h"
 #include "CMEstimatorGPUSparse.h"
 #include "Initializer.h"
 #include "InitializerGPU.h"
+#include "InitializerCPU.h"
 #include "ImageHandler.h"
 #include "Tester.h"
 #include <iostream>
@@ -42,7 +44,7 @@ int main(int argc, char** argv)
 	Initializer* init;
 	ImageComparator* comparator;
 
-//	iHandler->fillWithEmptyImages(30); //todo remove me. for testing purpose
+	iHandler->fillWithEmptyImages(30); //todo remove me. for testing purpose
 	printf("Directory %s with %i files initialized.\n", dir, iHandler->getTotalNr());
 
 	////////////
@@ -51,7 +53,7 @@ int main(int argc, char** argv)
 	int dim			= iHandler->getTotalNr();
 	float lambda 	= 1.0;
 	int iterations 	= 4;
-	int sizeOfInitIndicesList = 5; //todo make this dependent from dim (exponential)
+	int sizeOfInitIndicesList = 15; //todo make this dependent from dim (exponential)
 	int kBest 		= sizeOfInitIndicesList;
 
 	////////////////////////////////////
@@ -68,9 +70,9 @@ int main(int argc, char** argv)
 	printf("Executing CPU Version.\n");
 	T = new CPUImpl(dim, lambda);
 	CPUImpl* T_cpu = dynamic_cast<CPUImpl*> (T);
-//	init = new InitializerCPU();
+	init = new InitializerCPU();
 	CME = new CMEstimatorCPU();
-//	comparator = new CPUComparator();
+	comparator = new CPUComparator();
 #endif
 
 	/////////////////////////////////////////////////////////
@@ -84,20 +86,7 @@ int main(int argc, char** argv)
 			//Initialize Phase//
 			////////////////////
 			printf("Initializing Matrix.\n");
-#if GPU_VERSION
 			init->doInitializationPhase(T, iHandler, comparator, sizeOfInitIndicesList);
-#else
-			//CPU Version
-			//todo initializationPhase (w/ comparisons)
-			CME->getKBestConfMeasures(T, T->getConfMatrixF(), kBest);
-
-			T_cpu->print();
-
-			T_cpu->set(CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest);
-
-			T_cpu->print();
-			exit(EXIT_FAILURE);
-#endif
 			printf("Initialization of T done. \n");
 		}
 
@@ -109,13 +98,18 @@ int main(int argc, char** argv)
 #if GPU_VERSION
 		//get the next images that should be compared (implicitly solving eq. system => confidence measure matrix)
 		CME->getKBestConfMeasures(T, NULL, kBest);
-		//compare images which are located in the device arrays of CME_sparse
-		comparator->doComparison(iHandler, T, CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest);
+		//compare images which are located in the device arrays of CME
+		comparator->doComparison(iHandler, T, CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest); //device pointer
 		//update matrix with new information (compared images)
-		T_sparse->updateSparseStatus(CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest);
+		T_sparse->updateSparseStatus(CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest); //device pointer
 #else
 		//CPU Version
-
+		//get the next images that should be compared
+		CME->getKBestConfMeasures(T, T->getConfMatrixF(), kBest);
+		//compare images which are located in the arrays of CME
+		comparator->doComparison(iHandler, T, CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest); //host pointer
+		//update matrix with new information (compared images)
+		T_cpu->set(CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest); //host pointer
 #endif
 	}
 
@@ -128,7 +122,6 @@ int main(int argc, char** argv)
 #else
 
 #endif
-
 	delete CME;
 
 	return 0;
