@@ -4,7 +4,7 @@ TARGET		:= Main
 # Cuda source files (compiled with cudacc)
 CUFILES		:= GPUMatrix.cu GPUSparse.cu CMEstimatorGPUSparse.cu InitializerGPU.cu Helper.cu
 # C/C++ source files (compiled with gcc / c++)
-CCFILES		:= Main.cpp CPUImpl.cpp GPUComparator.cpp CMEstimatorCPU.cpp Tester.cpp ImageHandler.cpp CPUComparator.cpp InitializerCPU.cpp Comparator_CVGPU.cpp #Comparator_CPU.cpp
+CCFILES		:= Main.cpp CPUImpl.cpp GPUComparator.cpp CMEstimatorCPU.cpp Tester.cpp ImageHandler.cpp CPUComparator.cpp InitializerCPU.cpp Comparator_CVGPU.cpp Comparator_CPU.cpp
 
 #Paths to be set
 #### CUDA #####

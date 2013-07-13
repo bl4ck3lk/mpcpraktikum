@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 	Initializer* init;
 	ImageComparator* comparator;
 
-	iHandler->fillWithEmptyImages(30); //todo remove me. for testing purpose
+//	iHandler->fillWithEmptyImages(30); //todo remove me. for testing purpose
 	printf("Directory %s with %i files initialized.\n", dir, iHandler->getTotalNr());
 
 	////////////
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
 	int dim			= iHandler->getTotalNr();
 	float lambda 	= 1.0;
 	int iterations 	= 4;
-	int sizeOfInitIndicesList = 15; //todo make this dependent from dim (exponential)
+	int sizeOfInitIndicesList = 50; //todo make this dependent from dim (exponential)
 	int kBest 		= sizeOfInitIndicesList;
 
 	////////////////////////////////////

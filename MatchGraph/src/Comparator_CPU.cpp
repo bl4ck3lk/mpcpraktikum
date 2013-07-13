@@ -2,23 +2,13 @@
 #include <stdio.h>
 #include <iostream>
 #include <stdlib.h>     /* abs */
-#include <opencv2/core/core.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/nonfree/features2d.hpp> //This is where actual SURF and SIFT algorithm is located
-#include <opencv2/nonfree/nonfree.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/calib3d/calib3d.hpp> // for homography
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/gpu/gpu.hpp>
 #include "Comparator_CPU.h"
-
-#include <vector>
 
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-int Comparator_CPU::compare(char* img1, char* img2, bool showMatches, bool drawEpipolar)
+int Comparator_CPU::compare(const char* img1, const char* img2, bool showMatches, bool drawEpipolar)
 {
 
 	Mat im1 = imread( img1, 0 );
@@ -33,7 +23,7 @@ int Comparator_CPU::compare(char* img1, char* img2, bool showMatches, bool drawE
 	//imshow("i2",im2);
 
 	if( !im1.data || !im2.data )
-	{ std::cout<< " --(!) Error reading images " << std::endl; return -1; }
+	{ std::cout<< " --(!) Error reading images " << std::endl; return 0; }
 
 	//-- Step 1: Detect the keypoints using SURF Detector
 	//	int minHessian = 400;
@@ -105,11 +95,11 @@ int Comparator_CPU::compare(char* img1, char* img2, bool showMatches, bool drawE
 	if (verbose) {
 		std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
 	}
-	if (symMatches.size() < thresholdMatchPoints) return -1;
+	if (symMatches.size() < thresholdMatchPoints) return 0;
 
 	float k = (2 * symMatches.size()) / float(descriptors1.size().height + descriptors2.size().height);
 	//cout << "k(I_i, I_j) = " << k << endl;
-	if (k < 0.01) return -1;
+	if (k < 0.01) return 0;
 
 
 	// 5. Validate matches using RANSAC
