@@ -159,9 +159,9 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 		cudaMemcpy(testResult1, d_initIdx1, dim*sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(testResult2, d_initIdx2, dim*sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(testResult3, d_initRes, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
-		Tester::printArrayInt(testResult1, dim);
-		Tester::printArrayInt(testResult2, dim);
-		Tester::printArrayInt(testResult3, initArraySize);
+		Tester::printArray(testResult1, dim);
+		Tester::printArray(testResult2, dim);
+		Tester::printArray(testResult3, initArraySize);
 	}
 
 	//initialize cuRAND
@@ -180,8 +180,8 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 		printf("shuffled\n");
 		cudaMemcpy(testResult1, d_initIdx1, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(testResult2, d_initIdx2, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
-		Tester::printArrayInt(testResult1, initArraySize);
-		Tester::printArrayInt(testResult2, initArraySize);
+		Tester::printArray(testResult1, initArraySize);
+		Tester::printArray(testResult2, initArraySize);
 	}
 
 	//mask each entry on the upper diagonal matrix (prevents symmetrical image comparisons)
@@ -196,8 +196,8 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 		printf("swapped\n");
 		cudaMemcpy(testResult1, d_initIdx1, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(testResult2, d_initIdx2, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
-		Tester::printArrayInt(testResult1, initArraySize);
-		Tester::printArrayInt(testResult2, initArraySize);
+		Tester::printArray(testResult1, initArraySize);
+		Tester::printArray(testResult2, initArraySize);
 	}
 
 	//sort index array1 ascending and index array2 respectively
@@ -214,8 +214,8 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 		printf("sorted\n");
 		cudaMemcpy(testResult1, d_initIdx1, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(testResult2, d_initIdx2, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
-		Tester::printArrayInt(testResult1, initArraySize);
-		Tester::printArrayInt(testResult2, initArraySize);
+		Tester::printArray(testResult1, initArraySize);
+		Tester::printArray(testResult2, initArraySize);
 	}
 
 	//check for duplicated entries and mask them out
@@ -228,8 +228,8 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 		printf("masked duplicates\n");
 		cudaMemcpy(testResult1, d_initIdx1, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(testResult2, d_initIdx2, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
-		Tester::printArrayInt(testResult1, initArraySize);
-		Tester::printArrayInt(testResult2, initArraySize);
+		Tester::printArray(testResult1, initArraySize);
+		Tester::printArray(testResult2, initArraySize);
 	}
 
 	//sort again
@@ -242,8 +242,8 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 		printf("sorted\n");
 		cudaMemcpy(testResult1, d_initIdx1, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(testResult2, d_initIdx2, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
-		Tester::printArrayInt(testResult1, initArraySize);
-		Tester::printArrayInt(testResult2, initArraySize);
+		Tester::printArray(testResult1, initArraySize);
+		Tester::printArray(testResult2, initArraySize);
 	}
 
 	//compare images
@@ -256,9 +256,9 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 		cudaMemcpy(testResult1, d_initIdx1, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(testResult2, d_initIdx2, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
 		cudaMemcpy(testResult3, d_initRes, initArraySize*sizeof(int), cudaMemcpyDeviceToHost);
-		Tester::printArrayInt(testResult1, initArraySize);
-		Tester::printArrayInt(testResult2, initArraySize);
-		Tester::printArrayInt(testResult3, initArraySize);
+		Tester::printArray(testResult1, initArraySize);
+		Tester::printArray(testResult2, initArraySize);
+		Tester::printArray(testResult3, initArraySize);
 	}
 
 

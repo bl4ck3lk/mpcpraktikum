@@ -70,9 +70,9 @@ void CMEstimatorCPU::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
 
 	if (debugPrint) //debug print
 	{
-		Tester::printArrayInt(idx1, kBest);
-		Tester::printArrayInt(idx2, kBest);
-		Tester::printArrayInt(res, kBest);
+		Tester::printArray(idx1, kBest);
+		Tester::printArray(idx2, kBest);
+		Tester::printArray(res, kBest);
 	}
 
 	//sorted arrays
@@ -86,9 +86,9 @@ void CMEstimatorCPU::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
 	if (debugPrint) //debug print
 	{
 		printf("[ESTIMATOR]: sorted.\n");
-		Tester::printArrayInt(idx1, kBest);
-		Tester::printArrayInt(idx2, kBest);
-		Tester::printArrayInt(res, kBest);
+		Tester::printArray(idx1, kBest);
+		Tester::printArray(idx2, kBest);
+		Tester::printArray(res, kBest);
 	}
 }
 

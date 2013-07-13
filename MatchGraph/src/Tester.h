@@ -16,10 +16,14 @@ class Tester {
 public:
 	static void testLaplacian(char* gpuData, int* laplacian, int dim, float lambda);
 
-	static void printArrayInt(int* arr, int n);
-	static void printMatrixArrayInt(int* arr, int dim);
-	static void printArrayChar(char* arr, int n);
 	static void printMatrixArrayChar(char* arr, int dim);
+	static void printMatrixArrayInt(int* arr, int dim);
+
+	template<typename T>
+	static void printArray(T* array, const int size);
+	//CUDA seems not to like template
+	static void printArrayInt(int* arr, int n);
+	static void printArrayChar(char* arr, int n);
 	static void printArrayFloat(float* arr, int n);
 	static void printArrayLong(long* arr, int n);
 	static void printArrayDouble(double* arr, int n);

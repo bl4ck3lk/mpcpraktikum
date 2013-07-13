@@ -5,14 +5,15 @@
  *      Author: gufler
  */
 
-#include "CPUImpl.h"
 #include "Tester.h"
+#include "CPUImpl.h" //for Eigen library
+#include "Helper.h"
 #include <stdio.h>
 #include <iostream>
-#include "GPUSparse.h"
 
-Eigen::MatrixXd assemblyMatrixFromCSR(int* colIdx, int* rowPtr, int* degrees, int dim, double* values)
+Eigen::MatrixXd assemblyMatrixFromCSR(int* colIdx, int* rowPtr, int dim, double* values)
 {
+
 	Eigen::MatrixXd cpuMatrix = Eigen::MatrixXd::Zero(dim, dim);
 
 	for(int r = 0; r < dim; r++	)
@@ -33,18 +34,7 @@ Eigen::MatrixXd assemblyMatrixFromCSR(int* colIdx, int* rowPtr, int* degrees, in
 			}
 		}
 
-//		std::set<int>::const_iterator it = dissimilarMap.find(r);
-//
-//		if(it != dissimilarMap.end())
-//		{
-//			for(it = dissimilarMap.begin(); it < dissimilarMap.end(); it++)
-//			{
-//				const int j = *it;
-//				cpuMatrix(r, j) = -1;
-//			}
-//		}
 	}
-
 	return cpuMatrix;
 
 }
@@ -83,6 +73,20 @@ void Tester::testLaplacian(char* gpuData, int* laplacian, int dim, float lambda)
 
 }
 
+template<typename T>
+void Tester::printArray(T* arr, const int size)
+{
+	printf("[");
+	for (int i = 0; i < size; i++)
+	{
+		if(i == size-1)
+			std::cout << " " << arr[i] << " ";
+		else
+			std::cout << " " << arr[i] << ", ";
+	}
+	std::cout << "]" << std::endl;
+}
+
 void Tester::printArrayInt(int* arr, int n)
 {
 	printf("[");
@@ -94,65 +98,6 @@ void Tester::printArrayInt(int* arr, int n)
 			printf(" %d, ", arr[i]);
 	}
 	printf("]\n");
-}
-
-void Tester::printMatrixArrayInt(int* matrArr, int dim)
-{
-	for (int i = 0; i < dim; i++)
-	{
-		for (int j = 0; j < dim; j++)
-		{
-
-			int val = matrArr[i * dim + j];
-			if (val < 0)
-			{
-				printf("  %d ", val);
-			}
-			else
-			{
-				printf("   %d ", val);
-			}
-
-		}
-		printf("\n");
-	}
-	printf("\n");
-}
-
-void Tester::printArrayChar(char* arr, int n)
-{
-	printf("[");
-	for (int i = 0; i < n; i++)
-	{
-		if(i == n-1)
-			printf(" %d ", arr[i]);
-		else
-			printf(" %d, ", arr[i]);
-	}
-	printf("]\n");
-}
-
-void Tester::printMatrixArrayChar(char* matrArr, int dim)
-{
-	for (int i = 0; i < dim; i++)
-	{
-		for (int j = 0; j < dim; j++)
-		{
-
-			char val = matrArr[i * dim + j];
-			if (val < 0)
-			{
-				printf("  %d ", val);
-			}
-			else
-			{
-				printf("   %d ", val);
-			}
-
-		}
-		printf("\n");
-	}
-	printf("\n");
 }
 
 void Tester::printArrayFloat(float* arr, int n)
@@ -194,12 +139,71 @@ void Tester::printArrayDouble(double* arr, int n)
 	printf("]\n");
 }
 
+void Tester::printArrayChar(char* arr, int n)
+{
+	printf("[");
+	for (int i = 0; i < n; i++)
+	{
+		if(i == n-1)
+			printf(" %d ", arr[i]);
+		else
+			printf(" %d, ", arr[i]);
+	}
+	printf("]\n");
+}
+
+
+void Tester::printMatrixArrayInt(int* matrArr, int dim)
+{
+	for (int i = 0; i < dim; i++)
+	{
+		for (int j = 0; j < dim; j++)
+		{
+
+			int val = matrArr[i * dim + j];
+			if (val < 0)
+			{
+				printf("  %d ", val);
+			}
+			else
+			{
+				printf("   %d ", val);
+			}
+
+		}
+		printf("\n");
+	}
+	printf("\n");
+}
+
+void Tester::printMatrixArrayChar(char* matrArr, int dim)
+{
+	for (int i = 0; i < dim; i++)
+	{
+		for (int j = 0; j < dim; j++)
+		{
+
+			char val = matrArr[i * dim + j];
+			if (val < 0)
+			{
+				printf("  %d ", val);
+			}
+			else
+			{
+				printf("   %d ", val);
+			}
+
+		}
+		printf("\n");
+	}
+	printf("\n");
+}
 
 void Tester::testCSRMatrixUpdate(int* origRowPtr, int* origColIdx, int* degrees,
 		int* newRowPtr, int* newColIdx, int* idx1, int* idx2, int* res,  std::map<int,std::set<int> > dissimilarMap, int dim, int k)
 {
 
-	Eigen::MatrixXd origCPU = assemblyMatrixFromCSR(origColIdx, origRowPtr, degrees, dim, NULL);
+	Eigen::MatrixXd origCPU = assemblyMatrixFromCSR(origColIdx, origRowPtr, dim, NULL);
 
 	//do update on cpu
 	for(int i = 0; i < k; i++)
@@ -215,7 +219,7 @@ void Tester::testCSRMatrixUpdate(int* origRowPtr, int* origColIdx, int* degrees,
 		}
 	}
 
-	Eigen::MatrixXd updateCPU = assemblyMatrixFromCSR(newColIdx, newRowPtr, degrees, dim, NULL);
+	Eigen::MatrixXd updateCPU = assemblyMatrixFromCSR(newColIdx, newRowPtr, dim, NULL);
 
 	//Compare
 	for(int i = 0; i < dim; i++)
@@ -237,7 +241,7 @@ void Tester::testCSRMatrixUpdate(int* origRowPtr, int* origColIdx, int* degrees,
 
 void Tester::testValueArray(int* rowPtr, int* colIdx, int* degrees, int dim, int nnz, int lambda, double* gpuResult)
 {
-	Eigen::MatrixXd cpuMatr = assemblyMatrixFromCSR(colIdx, rowPtr, degrees, dim, NULL);
+	Eigen::MatrixXd cpuMatr = assemblyMatrixFromCSR(colIdx, rowPtr, dim, NULL);
 
 	double* cpuValueArray = (double*) malloc(nnz * sizeof(double));
 
@@ -267,9 +271,9 @@ void Tester::testValueArray(int* rowPtr, int* colIdx, int* degrees, int dim, int
 		const double cpuVal = cpuValueArray[i];
 		if(cpuVal != gpuVal)
 		{
-			GPUSparse::printGpuArray(rowPtr, dim+1, "RowPtr:");
+			Helper::printGpuArray(rowPtr, dim+1, "RowPtr:");
 
-			GPUSparse::printGpuArray(colIdx, dim+1, "ColIdx:");
+			Helper::printGpuArray(colIdx, dim+1, "ColIdx:");
 
 			printf("\t ++++++++++++++======[VALUE ARRAY] ERROR\n");
 			printf("%i: %f [CPU] vs %f [GPU] \n", i, cpuVal, gpuVal);
@@ -322,7 +326,7 @@ void Tester::testColumn(std::map<int,std::set<int> > dissimilarMap, int* rowPtr,
 
 void Tester::testColumnSolution(int* rowPtr, int* colIdx, double* A, double* b, double* x, int col,  const int dim)
 {
-	Eigen::MatrixXd cpuMatr = assemblyMatrixFromCSR(colIdx, rowPtr, NULL, dim, A);
+	Eigen::MatrixXd cpuMatr = assemblyMatrixFromCSR(colIdx, rowPtr, dim, A);
 
 	Eigen::VectorXd b_cpu = Eigen::VectorXd::Zero(dim);
 //

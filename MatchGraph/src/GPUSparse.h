@@ -18,15 +18,29 @@ typedef std::map<int,std::set<int> > myElemMap;
 
 class GPUSparse : public MatrixHandler{
 private:
+	// the dimension of the matrix (symmetric matrix)
 	const unsigned int dim;
-	const float lambda;
-	unsigned int num_similar; //# of similarities that is (number of 1s / 2)
 
-	int* _gpuDiagPos; //position of diagonal elements within row
+	// algorithm parameter lambda
+	const float lambda;
+
+	//# of similarities that is (number of 1s / 2)
+	unsigned int num_similar;
+
+	//position of diagonal elements within row
+	int* _gpuDiagPos;
+
+	//degree of diagonal elements (neighbors of a node)
 	int* _gpuDegrees;
+
+	// the row pointer array (CSR sparse matrix format)
 	int* _gpuRowPtr;
+
+	//the column index array (CSR sparse matrix format)
 	int* _gpuColIdx;
 	
+	//a map containing all dissimilar elements with the row index as key and a set
+	//of column indices as value
 	myElemMap dissimilarMap;
 
 	void addNewToRow(const int row, const int j);
@@ -49,27 +63,18 @@ public:
 	void print();
 	void writeGML(char* filename, bool similar, bool dissimilar, bool potential);
 
-	/* SPARSE-specific */
-	float* getValueArr(bool gpuPointer) const;
-	double* getValueArrDouble(bool gpuPointer) const;
+	/* SPARSE-specific functions (not in virtual superclass) */
+	unsigned int getNNZ() const;
+	int* getColIdxDevice() const;
+	int* getRowPtrDevice() const;
+
+	float* getValueArray(bool gpuPointer) const;
+	double* getValueArrayDouble(bool gpuPointer) const;
 
 	float* getColumn(int i) const;
 	double* getColumnDouble(int i) const;
 
-	int* getColIdx() const;
-	int* getColIdxDevice() const;
-	int* getRowPtr() const;
-	int* getRowPtrDevice() const;
-	unsigned int getNNZ() const;
-	void setRandom(int num);
-
-	static int* prefixSumGPU(int* result, const int* array, const int dimension);
-	static void printGpuArray(int* devPtr, const int size, const std::string message);
-	static void printGpuArrayF(float* devPtr, const int size, const std::string message);
-	static void printGpuArrayD(double * devPtr, const int size, std::string message);
-	static int* downloadGPUArrayInt(int* devPtr, const int size);
-	static float* downloadGPUArrayFloat(float* devPtr, const int size);
-	static double* downloadGPUArrayDouble(double* devPtr, const int size);
+	void logSimilarToFile(char *path) const;
 };
 
 #endif /* GPUSPARSE_H_ */

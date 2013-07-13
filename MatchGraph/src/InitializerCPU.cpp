@@ -77,8 +77,8 @@ void InitializerCPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 
 	if (debugPrint)
 	{
-		Tester::printArrayInt(idx1, initArraySize);
-		Tester::printArrayInt(idx2, initArraySize);
+		Tester::printArray(idx1, initArraySize);
+		Tester::printArray(idx2, initArraySize);
 	}
 
 	//2. Compare these random images
@@ -86,7 +86,7 @@ void InitializerCPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 
 	if (debugPrint)
 	{
-		Tester::printArrayInt(res, initArraySize);
+		Tester::printArray(res, initArraySize);
 	}
 
 	//3. Update T Matrix

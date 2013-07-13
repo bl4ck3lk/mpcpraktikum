@@ -26,14 +26,13 @@
 
 #define GPU_VERSION 1
 
-//TODO big dimensions
-//TODO move/delete old stuff
 //TODO clean up classes...
 //TODO timing, evaluation...
 //TODO logging of similarities -> file
 //TODO CULA configuration
 //TODO random steps
-//TODO why does the solve time gets higher with more iterations?
+//TODO why does the solver time get higher with more iterations?
+		//Observation: first it gets slower and later sometimes again faster and faster
 //TODO host thread for dissimilar update?
 
 int main(int argc, char** argv)
@@ -215,18 +214,18 @@ int main(int argc, char** argv)
 		//update matrix with new information (compared images)
 		T_sparse->updateSparseStatus(CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest); //device pointer
 #else
-				//CPU Version
-				//get the next images that should be compared
-				CME->getKBestConfMeasures(T, T->getConfMatrixF(), kBest);
-				//compare images which are located in the arrays of CME
-				comparator->doComparison(iHandler, T, CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest);//host pointer
-				//update matrix with new information (compared images)
-				T_cpu->set(CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest);//host pointer
+		//CPU Version
+		//get the next images that should be compared
+		CME->getKBestConfMeasures(T, T->getConfMatrixF(), kBest);
+		//compare images which are located in the arrays of CME
+		comparator->doComparison(iHandler, T, CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest);//host pointer
+		//update matrix with new information (compared images)
+		T_cpu->set(CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest);//host pointer
 #endif
 	}
 
 	printf("Resulting Matrix:\n");
-//	T->print();
+	T->print();
 
 	//cleanup
 #if GPU_VERSION
