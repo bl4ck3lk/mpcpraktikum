@@ -15,20 +15,17 @@
 class CMEstimatorGPUSparse : public CMEstimator{
 public:
 	CMEstimatorGPUSparse();
-	virtual ~CMEstimatorGPUSparse();
+	~CMEstimatorGPUSparse();
 
-	int* getIdx1DevicePtr();
-	int* getIdx2DevicePtr();
-	int* getResDevicePtr();
+	int* getIdx1Ptr();
+	int* getIdx2Ptr();
+	int* getResPtr();
 
 	int* getIdx1HostPtr(int dim); //todo only for testing purpose
 	int* getResHostPtr(int dim); //todo only for testing purpose
 	void setResDevicePtr(int* res, int dim); //todo only for testing purpose
 
-	Indices* getKBestConfMeasures(MatrixHandler* T, float* F, int kBest); //not used in this implementation
-	void getKBestConfMeasuresSparse(MatrixHandler* T, float* F, int kBest);
-
-	Indices* getInitializationIndices(MatrixHandler* T, int initNr); //not used in this implementation
+	void getKBestConfMeasures(MatrixHandler* T, float* F, int kBest);
 
 private:
 	int lastSize;
@@ -42,7 +39,6 @@ private:
 
 	/* cula */
 
-	Indices* getKBestConfMeasures(float* xColumnDevice, float* bColumnDevice, int columnIdx, int dim, int kBest);
 	int determineBestConfMeasures(double* xColumnDevice, double* bColumnDevice, int columnIdx, int dim, int kBest, int kBestForThisColumn, int currIndexNr);
 	culaSparseStatus computeConfidenceMeasure(culaSparseHandle handle, culaSparsePlan plan, culaSparseConfig config, unsigned int dim, unsigned int nnz, double* A, int* rowPtr, int* colIdx, double* x, double* b);
 	void initIdxDevicePointers(int size, unsigned int dim);

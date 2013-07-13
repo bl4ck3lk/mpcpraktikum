@@ -1,20 +1,19 @@
 /*
- * CPUComparator.cpp
+ * GPUComparator.cpp
  *
  *  Created on: May 29, 2013
- *      Author: gufler
+ *      Author: Fabian
  */
 
-#include "CPUComparator.h"
+#include "GPUComparator.h"
 #include <stdio.h> //printf
 #include "Helper.h"
 #include "Tester.h"
 
-//todo remove me (random)
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
 
-CPUComparator::CPUComparator()
+GPUComparator::GPUComparator()
 {
 	openCVcomp = new ComparatorCVGPU();
 
@@ -24,14 +23,14 @@ CPUComparator::CPUComparator()
 	currentArraySize = 0;
 }
 
-CPUComparator::~CPUComparator()
+GPUComparator::~GPUComparator()
 {
 	if (h_idx1 != NULL) delete[] h_idx1;
 	if (h_idx2 != NULL) delete[] h_idx2;
 	if (h_res != NULL) delete[] h_res;
 }
 
-void CPUComparator::initArrays(int arraySize)
+void GPUComparator::initArrays(int arraySize)
 {
 	if (h_idx1 != NULL) delete[] h_idx1;
 	if (h_idx2 != NULL) delete[] h_idx2;
@@ -42,9 +41,9 @@ void CPUComparator::initArrays(int arraySize)
 	h_res = new int[arraySize];
 }
 
-void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* d_idx1, int* d_idx2, int* d_res, int arraySize)
+void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* d_idx1, int* d_idx2, int* d_res, int arraySize)
 {
-	bool imageComparison = true;
+	bool imageComparison = true; //disable image comparison for testing purpose
 
 	if (imageComparison)
 	{
@@ -54,7 +53,7 @@ void CPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 		h_idx2 = Helper::downloadGPUArrayInt(d_idx2, arraySize);
 		h_res = Helper::downloadGPUArrayInt(d_res, arraySize);
 
-		printf("Comparing images with OpenCV_GPU...\n");
+		printf("Comparing %i images with OpenCV_GPU...\n", arraySize);
 		openCVcomp->compareGPU(iHandler, h_idx1, h_idx2, h_res, arraySize, true, false);
 
 		//upload Result

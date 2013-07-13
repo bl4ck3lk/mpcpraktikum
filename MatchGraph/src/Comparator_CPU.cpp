@@ -10,7 +10,7 @@
 #include <opencv2/calib3d/calib3d.hpp> // for homography
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
-#include "Comparator.h"
+#include "Comparator_CPU.h"
 
 #include <vector>
 
@@ -18,7 +18,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-int Comparator::compare(char* img1, char* img2, bool showMatches, bool drawEpipolar)
+int Comparator_CPU::compare(char* img1, char* img2, bool showMatches, bool drawEpipolar)
 {
 
 	Mat im1 = imread( img1, 0 );
@@ -185,7 +185,7 @@ int Comparator::compare(char* img1, char* img2, bool showMatches, bool drawEpipo
 }
 
 
-int Comparator::ratioTest(std::vector< std::vector<cv::DMatch> >& matches) {
+int Comparator_CPU::ratioTest(std::vector< std::vector<cv::DMatch> >& matches) {
 
 	int removed=0;
 	float ratio = 0.85f;
@@ -215,7 +215,7 @@ int Comparator::ratioTest(std::vector< std::vector<cv::DMatch> >& matches) {
 }
 
 // Insert symmetrical matches in symMatches vector
-void Comparator::symmetryTest(const std::vector< std::vector<cv::DMatch> >& matches1,
+void Comparator_CPU::symmetryTest(const std::vector< std::vector<cv::DMatch> >& matches1,
 		const std::vector< std::vector<cv::DMatch> >& matches2,
 		std::vector<cv::DMatch>& symMatches) {
 
@@ -249,7 +249,7 @@ void Comparator::symmetryTest(const std::vector< std::vector<cv::DMatch> >& matc
 
 // Identify good matches using RANSAC
 // Return fundemental matrix
-cv::Mat Comparator::ransacTest(const std::vector<cv::DMatch>& matches,
+cv::Mat Comparator_CPU::ransacTest(const std::vector<cv::DMatch>& matches,
 		const std::vector<cv::KeyPoint>& keypoints1,
 		const std::vector<cv::KeyPoint>& keypoints2,
 		std::vector<cv::DMatch>& outMatches) {

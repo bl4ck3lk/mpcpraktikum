@@ -11,82 +11,37 @@
 #include <time.h>       /* time */
 #include <vector>
 #include <algorithm> //std::find
-#include <iostream> //TODO remove later
+#include <iostream>
+#include <map>
+#include "Tester.h"
 
-CMEstimatorCPU::CMEstimatorCPU() {
-	// TODO Auto-generated constructor stub
-
-}
-
-Indices* CMEstimatorCPU::getInitializationIndices(MatrixHandler* T, int initNr)
+CMEstimatorCPU::CMEstimatorCPU()
 {
-	Indices* initIndices = new Indices[initNr];
-	std::vector<int> chosenOnes; //max size will be initNr
-	int dim = T->getDimension();
-
-	//generate random index
-	srand (time(NULL));
-	const int MAX_ITERATIONS = dim*(dim/2) + dim; //#elements in upper diagonal matrix + dim
-
-	//generate initialization indices
-	for(int i = 0; i < initNr; i++)
-	{
-		int rIdx = -1;
-		int x, y;
-
-		int c = 0;
-		do {
-			//get random number
-			rIdx = rand() % (dim*dim);
-
-			//compute matrix indices with given continuous index sequence
-			x = rIdx/dim;
-			y = rIdx%dim;
-			c++;
-		} while ( ((rIdx < 1+(rIdx/dim)+(rIdx/dim)*dim)
-					|| (T->getVal(x,y) != 0)
-					|| (std::find(chosenOnes.begin(), chosenOnes.end(), rIdx) != chosenOnes.end()))
-				&& (c <= MAX_ITERATIONS) );
-		/* :TRICKY:
-		 * As long as the random number is not within the upper diagonal matrix w/o diagonal elements
-		 * or T(idx) != 0 generate or already in the list of Indices, a new random index but maximal
-		 * MAX_ITERAtION times.
-		 */
-
-		if (c <= MAX_ITERATIONS) //otherwise initIndices contains -1 per struct definition
-		{
-			chosenOnes.push_back(rIdx);
-			initIndices[i].i = x;
-			initIndices[i].j = y;
-		}
-	}
-
-	return initIndices;
+	idx1 = NULL;
+	idx2 = NULL;
+	res = NULL;
+	currentArraySize = 0;
 }
 
-Indices* CMEstimatorCPU::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
+CMEstimatorCPU::~CMEstimatorCPU()
+{
+	//todo
+}
+
+void CMEstimatorCPU::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
 {
 	printf("Determine kBest confidence measures on CPU:\n");
-
 	int dim = T->getDimension();
-	Entry* kBestEntries = new Entry[kBest];
-	Indices* kBestIndices = new Indices[kBest];
 
-	//Initialize list
-	for (int j = 0; j < kBest; j++)
-	{
-		kBestEntries[j].value = -10000.0;
-		kBestEntries[j].i = -1;
-		kBestEntries[j].j = -1;
-	}
+	//initialize index arrays
+	if (currentArraySize != kBest) initIdxArrays(kBest, dim);
 
+	std::map<float, long> confMeasureWithIndex;
 
-
-	//linear search
-	/* :TRICKY:
+	/*
 	 * For loop only traverses the upper diagonal matrix without the diagonal elements.
 	 */
-	for (int i = 1; i < dim*dim; (((i+1)%dim) == 0) ? i += (((i+1)/dim) + 2) : i++)
+	for (long i = 1; i < dim*dim; (((i+1)%dim) == 0) ? i += (((i+1)/dim) + 2) : i++)
 	{
 		//compute matrix indices with given continuous index sequence
 		int x = i/dim;
@@ -94,41 +49,59 @@ Indices* CMEstimatorCPU::getKBestConfMeasures(MatrixHandler* T, float* F, int kB
 
 		//get information status for this index
 		char tval = T->getVal(x, y);
-		//std::cout << "tval (" << i/dim << "," << i%dim<< ") = "<< 0+tval << std::endl;
 
 		if (tval == 0)
 		{
 			float value = F[i];
-
-			int findMin = 0;
-			float findMinValue = kBestEntries[0].value;
-			for (int j = 0; j < kBest; j++)
-			{
-				if (findMinValue > kBestEntries[j].value)
-				{
-					findMinValue = kBestEntries[j].value;
-					findMin = j;
-				}
-			}
-
-			if (value > findMinValue)
-			{
-				kBestEntries[findMin].value = value;
-				kBestEntries[findMin].i = x;
-				kBestEntries[findMin].j = y;
-
-				kBestIndices[findMin].i = x;
-				kBestIndices[findMin].j = y;
-			}
+			confMeasureWithIndex.insert(std::pair<float, long>(value, i));
 		}
 	}
 
-	//print
-    printf("%i best entries:\n",kBest);
-    for (int k = 0; k < kBest; k++)
-    {
-        printf("%i: %f at [%i,%i]\n",k,kBestEntries[k].value,kBestEntries[k].i,kBestEntries[k].j);
-    }
+	int count = 0;
+	for (std::map<float, long>::reverse_iterator iter = confMeasureWithIndex.rbegin(); iter != confMeasureWithIndex.rend() && count < kBest; ++iter)
+	{
+		idx1[count] = iter->second/dim;
+		idx2[count] = iter->second%dim;
+		count++;
+	}
 
-	return kBestIndices;
+	if (true) //debug print
+	{
+		Tester::printArrayInt(idx1, kBest);
+		Tester::printArrayInt(idx2, kBest);
+		Tester::printArrayInt(res, kBest);
+	}
+}
+
+int* CMEstimatorCPU::getIdx1Ptr()
+{
+	return idx1;
+}
+
+int* CMEstimatorCPU::getIdx2Ptr()
+{
+	return idx2;
+}
+
+int* CMEstimatorCPU::getResPtr()
+{
+	return res;
+}
+
+void CMEstimatorCPU::initIdxArrays(int arraySize, int dim)
+{
+	if (idx1 != NULL) delete[] idx1;
+	if (idx2 != NULL) delete[] idx2;
+	if (res != NULL) delete[] res;
+
+	idx1 = new int[arraySize];
+	idx2 = new int[arraySize];
+	res = new int[arraySize];
+
+	for(int i = 0; i < arraySize; i++)
+	{
+		idx1[i] = dim+1;
+		idx2[i] = dim+1;
+		res[i] = 0;
+	}
 }

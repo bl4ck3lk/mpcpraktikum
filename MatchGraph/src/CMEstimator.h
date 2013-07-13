@@ -10,23 +10,13 @@
 
 #include "MatrixHandler.h"
 
-struct Indices {
-	int i, j;
-	
-	//constructor initializes to -1
-	Indices() : i(-1), j(-1) {}
-};
-
-struct Entry {
-    float value;
-    int i, j;
-};
-
 class CMEstimator {
 public:
-	virtual Indices* getKBestConfMeasures(MatrixHandler* T, float* F, int kBest) = 0;
-	virtual Indices* getInitializationIndices(MatrixHandler* T, int initNr) = 0;
 	virtual ~CMEstimator(){};
+	virtual void getKBestConfMeasures(MatrixHandler* T, float* F, int kBest) = 0;
+	virtual int* getIdx1Ptr() = 0;
+	virtual int* getIdx2Ptr() = 0;
+	virtual int* getResPtr() = 0;
 };
 
 #endif /* CMESTIMATOR_H_ */

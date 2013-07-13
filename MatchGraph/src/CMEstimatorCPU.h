@@ -9,14 +9,27 @@
 #define CMESTIMATORCPU_H_
 
 #include "CMEstimator.h"
+#include "../lib/Eigen/Eigen/Dense"
 
 class CMEstimatorCPU : public CMEstimator{
 public:
 	CMEstimatorCPU();
-	Indices* getKBestConfMeasures(MatrixHandler* T, float* F, int kBest);
-	Indices* getInitializationIndices(MatrixHandler* T, int initNr);
-	//todo destructor
-	//virtual ~CMEstimatorCPU();
+
+	void getKBestConfMeasures(MatrixHandler* T, float* F, int kBest);
+
+	~CMEstimatorCPU();
+
+	int* getIdx1Ptr();
+	int* getIdx2Ptr();
+	int* getResPtr();
+
+private:
+	int* idx1;
+	int* idx2;
+	int* res;
+	int currentArraySize;
+
+	void initIdxArrays(int arraySize, int dim);
 };
 
 #endif /* CMESTIMATORCPU_H_ */

@@ -124,17 +124,17 @@ CMEstimatorGPUSparse::~CMEstimatorGPUSparse() {
 	if (res != NULL) free(res);
 }
 
-int* CMEstimatorGPUSparse::getIdx1DevicePtr()
+int* CMEstimatorGPUSparse::getIdx1Ptr()
 {
 	return d_idx1;
 }
 
-int* CMEstimatorGPUSparse::getIdx2DevicePtr()
+int* CMEstimatorGPUSparse::getIdx2Ptr()
 {
 	return d_idx2;
 }
 
-int* CMEstimatorGPUSparse::getResDevicePtr()
+int* CMEstimatorGPUSparse::getResPtr()
 {
 	return d_res;
 }
@@ -201,19 +201,6 @@ void CMEstimatorGPUSparse::initIdxDevicePointers(int size, unsigned int dim)
 	printf("[ESTIMATOR]: Device index arrays with size %i allocated.\n",size);
 }
 
-//Not needed in this particular implementation
-Indices* CMEstimatorGPUSparse::getInitializationIndices(MatrixHandler* T, int initNr)
-{
-	return NULL;
-}
-
-//Not needed in this particular implementation.
-Indices* CMEstimatorGPUSparse::getKBestConfMeasures(float* xColumnDevice, float* bColumnDevice, int columnIdx, int dim, int kBestForThisColumn)
-{
-	return NULL;
-}
-
-
 /*
  * Determines column-wise the best confidence measures of the specific column and saves it indices in two arrays.
  * Returns the number of actually written slots.
@@ -272,12 +259,7 @@ int CMEstimatorGPUSparse::determineBestConfMeasures(double* xColumnDevice, doubl
 	return kBestForThisColumn - notWritten;
 }
 
-Indices* CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
-{
-	return NULL;
-}
-
-void CMEstimatorGPUSparse::getKBestConfMeasuresSparse(MatrixHandler* T, float* F, int kBest)
+void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
 {
 	printf("[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).\n");
 

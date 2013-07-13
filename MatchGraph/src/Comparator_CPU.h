@@ -5,10 +5,10 @@
  *      Author: rodrigpro
  */
 
-#ifndef COMPARATOR_H_
-#define COMPARATOR_H_
+#ifndef COMPARATOR_CPU_H_
+#define COMPARATOR_CPU_H_
 
-class Comparator {
+class Comparator_CPU {
 public:
 	int compare(char* img1, char* img2, bool showMatches=false, bool drawEpipolar=false);
 
@@ -22,7 +22,7 @@ public:
 			                 const std::vector<cv::KeyPoint>& keypoints1,
 							 const std::vector<cv::KeyPoint>& keypoints2,
 						     std::vector<cv::DMatch>& outMatches);
-	~Comparator(){};
+	~Comparator_CPU(){};
 };
 
-#endif /* COMPARATOR_H_ */
+#endif /* COMPARATOR_CPU_H_ */

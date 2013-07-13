@@ -23,6 +23,7 @@ public:
 	CPUImpl(int dim, float lambda);
 	//~CPUImpl();
 	void set(int i, int j, bool val);
+	void set(int* idx1, int* idx2, int* res, int size);
 	unsigned int getDimension();
 	float* getConfMatrixF();
 	Eigen::MatrixXf getModLaplacian();

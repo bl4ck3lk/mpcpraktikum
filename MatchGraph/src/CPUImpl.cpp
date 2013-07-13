@@ -13,7 +13,7 @@ CPUImpl::CPUImpl(int _dim, float _lambda)
 {
 	dim = _dim;
 		lambda = _lambda;
-		bool test = false;
+		bool test = true;
 
 		if (test) {
 			testInit();
@@ -114,6 +114,17 @@ Eigen::MatrixXf CPUImpl::getModLaplacian()
 void CPUImpl::set(int i, int j, bool val)
 {
 	m(i,j) = val ? 1 : -1;
+}
+
+void CPUImpl::set(int* idx1, int* idx2, int* res, int size)
+{
+	for(int i = 0; i < size; i++)
+	{
+		int x = idx1[i];
+		int y = idx2[i];
+		printf("[%i,%i] = %i\n", x, y, res[i]);
+		m(x,y) = (res[i] == 1) ? 1 : -1;
+	}
 }
 
 void CPUImpl::print()
