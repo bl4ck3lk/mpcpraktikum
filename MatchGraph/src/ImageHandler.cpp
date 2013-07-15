@@ -105,3 +105,8 @@ void ImageHandler::fillWithEmptyImages(unsigned int num)
 		images.insert(std::pair<int,std::string>(nrImages++, ""));
 	}
 }
+
+const std::string ImageHandler::getDirectoryPath() const
+{
+	return directory;
+}

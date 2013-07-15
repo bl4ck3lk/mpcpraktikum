@@ -9,6 +9,7 @@
 #define GPUSPARSE_H_
 
 #include "MatrixHandler.h"
+#include "ImageHandler.h"
 #include <set>
 #include <map>
 #include <string>
@@ -74,7 +75,7 @@ public:
 	float* getColumn(int i) const;
 	double* getColumnDouble(int i) const;
 
-	void logSimilarToFile(char *path) const;
+	void logSimilarToFile(const char *path, ImageHandler* iHandler) const;
 };
 
 #endif /* GPUSPARSE_H_ */
