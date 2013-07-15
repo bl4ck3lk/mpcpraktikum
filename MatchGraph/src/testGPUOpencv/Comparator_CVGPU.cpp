@@ -42,73 +42,40 @@ struct IMG {
 // should be modified to: get an array of images, upload them all
 // ? extract all features immediately?
 // match a desired pair using the match2 function
-int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2, int* h_result, int k, bool showMatches, bool drawEpipolar)
+int ComparatorCVGPU::compareGPU(std::string* images1, std::string* images2, int k, bool showMatches, bool drawEpipolar)
 {
-	std::map< int, IMG > comparePairs;
+	std::map< std::string, IMG > comparePairs;
 
 	SURF_GPU surf;
-	for (int i=0; i < k && h_idx1[i] < iHandler->getTotalNr(); i++) {
-		IMG i1;
-		IMG i2;
-		std::map<int, IMG>::iterator it1 = comparePairs.find(h_idx1[i]);
-		if (it1 == comparePairs.end()) {
-			i1 = uploadImage(h_idx1[i], surf, iHandler);
-			comparePairs.insert(std::make_pair(h_idx1[i], i1));
+	for (int i=0; i < k; i++) {
+		if (comparePairs.find(images1[i]) == comparePairs.end()) {
+			comparePairs.insert(std::make_pair(images1[i], uploadImage(images1[i], surf)));
+			std::cout << "Picture inserted : " << images1[i] << std::endl;
+		}
 
-			std::cout << "Picture inserted : " << h_idx1[i] << std::endl;
-		}
-		else
-		{
-			i1 = (*it1).second;
-		}
-		std::map<int, IMG>::iterator it2 = comparePairs.find(h_idx2[i]);
-		if (it2 == comparePairs.end()) {
-			i2 = uploadImage(h_idx2[i], surf, iHandler);
-			comparePairs.insert(std::make_pair(h_idx2[i], i2));
-
-			std::cout << "Picture inserted : " << h_idx2[i] << std::endl;
-		}
-		else
-		{
-			i2 = (*it2).second;
+		if (comparePairs.find(images2[i]) == comparePairs.end()) {
+			comparePairs.insert(std::make_pair(images2[i], uploadImage(images2[i], surf)));
+			std::cout << "Picture inserted : " << images2[i] << std::endl;
 		}
 
 		std::vector<cv::DMatch> symMatches;
+		IMG& i1 = comparePairs.find(images1[i])->second;
+		IMG& i2 = comparePairs.find(images2[i])->second;
 		match2(i1.descriptors, i2.descriptors, symMatches);
 		std::cout << ".............." << std::endl;
-
-//		surf.downloadKeypoints(i1.keypoints, i1.h_keypoints);
-//		surf.downloadKeypoints(i2.keypoints, i2.h_keypoints);
-
-		printf("img1 keypoints size %i\n", i1.h_keypoints.size());
-		printf("img2 keypoints size %i\n", i2.h_keypoints.size());
-		float k = (2 * symMatches.size()) / float(i1.h_keypoints.size() + i2.h_keypoints.size());
-		cout << "k(I_i, I_j) = " << k << endl;
-
-		if (k < 0.02)
-		{
-			h_result[i] = 0;
-		}
-		else
-		{
-			h_result[i] = 1;
-		}
 	}
 	//surf.releaseMemory();
 	// destroy device allocated data?
 	// download result?
 	// ransac??
-
 	return 1;
 }
 
-IMG ComparatorCVGPU::uploadImage(const int inputImg, SURF_GPU& surf, ImageHandler* iHandler) {
+IMG ComparatorCVGPU::uploadImage(const std::string& inputImg, SURF_GPU& surf) {
 	struct IMG* img = new IMG();
-	printf("%i\n",inputImg);
-	cv::Mat imgfile = imread( iHandler->getFullImagePath(inputImg), 0 );
+	cv::Mat imgfile = imread( inputImg, 0 );
 	img->im_gpu.upload(imgfile);
 	surf(img->im_gpu, cv::gpu::GpuMat(), img->keypoints, img->descriptors, false);
-	surf.downloadKeypoints(img->keypoints, img->h_keypoints);
 	return *img;
 }
 void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu, 
@@ -316,7 +283,6 @@ cv::Mat ComparatorCVGPU::ransacTest(const std::vector<cv::DMatch>& matches,
 	return fundamental;
 }
 
-/*
 int main( int argc, char** argv )
 {
 	int k = 12;
@@ -350,8 +316,8 @@ int main( int argc, char** argv )
 	images2[11] = "paris2.jpg";
 	
 	ComparatorCVGPU comp;
-	int result = comp.compareGPU(images1, images2, NULL, k, true, false);
+	int result = comp.compareGPU(images1, images2, k, true, false);
 	//int result = comp.compareGPU(argv[1], argv[2], true, false);
 	cout << "result = " << result << endl;
 }
-*/
+
