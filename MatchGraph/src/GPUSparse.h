@@ -40,6 +40,9 @@ private:
 	//the column index array (CSR sparse matrix format)
 	int* _gpuColIdx;
 	
+	//a pointer to memory used when getting a specific column in order to avoid malloc each time
+	double* _gpuColumnPtr;
+
 	//a map containing all dissimilar elements with the row index as key and a set
 	//of column indices as value
 	myElemMap dissimilarMap;
@@ -74,6 +77,8 @@ public:
 
 	float* getColumn(int i) const;
 	double* getColumnDouble(int i) const;
+
+	void fillRandomCompareIndices(int* idx1, int* idx2, int* res, const int k) const;
 
 	void logSimilarToFile(const char *path, ImageHandler* iHandler) const;
 };

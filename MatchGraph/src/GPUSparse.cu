@@ -13,6 +13,7 @@
 #include <thrust/sort.h>
 #include <thrust/scan.h>
 #include <fstream>
+#include <curand_kernel.h>
 
 #define CUDA_SAFE_CALL(err) {							\
 if (cudaSuccess != err)	{						\
@@ -228,6 +229,52 @@ __global__ void columnWriteKernelDouble(double* dst, int* colIdx, int* rowPtr, i
 	}
 }
 
+__global__ void setupCurandkernel(curandState *state)
+{
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    /* Each thread gets same seed, a different sequence number, no offset */
+    /* (from CUDA CURAND documentation) */
+    curand_init(1234, tid, 0, &state[tid]);
+}
+
+
+__global__ void randomComparisonFillKernel(float* test, int* idx1, int* idx2, int* rowPtr,
+							int* colIdx, const int k, const int dim, curandState* state)
+{
+	int tIdx = threadIdx.x + blockDim.x * blockIdx.x;
+
+	if(tIdx < k)
+	{
+		int myRandomRow;
+		int rangeSize = dim/k;
+		const int myLowLimit = tIdx * rangeSize; //rand must be >= this limit
+		const int myUpperLimit = myLowLimit + rangeSize - 1; //rand must be < this limit
+
+		if(myLowLimit == myUpperLimit)
+		{
+			myRandomRow = myLowLimit;
+		}
+		else
+		{
+			curandState localState = state[tIdx];
+			float uniRand = curand_uniform(&localState);
+			state[tIdx] = localState; //back to global
+
+			myRandomRow = myLowLimit + (uniRand * (myUpperLimit - myLowLimit)) - 1; // should be in [low,up)
+			test[tIdx] = uniRand;
+		}
+
+		idx1[tIdx] = myRandomRow;
+
+		for(int j = rowPtr[myRandomRow]; j < rowPtr[myRandomRow+1]; j++)
+		{
+
+			//TODO
+		}
+
+	}
+}
+
 GPUSparse::GPUSparse(unsigned int _dim, float _lambda) :
 		dim(_dim), lambda(_lambda)
 {
@@ -237,6 +284,7 @@ GPUSparse::GPUSparse(unsigned int _dim, float _lambda) :
 	cudaMalloc((void**) &_gpuColIdx, dim*sizeof(int));
 	cudaMalloc((void**) &_gpuDegrees, dim*sizeof(int));
 	cudaMalloc((void**) &_gpuDiagPos, dim*sizeof(int));
+	cudaMalloc((void**) &_gpuColumnPtr, dim*sizeof(double));
 
 	const int numThreads = 128;
 	const int numBlocks = 1 + (dim/numThreads);
@@ -251,6 +299,7 @@ GPUSparse::~GPUSparse()
 	cudaFree(_gpuRowPtr);
 	cudaFree(_gpuDegrees);
 	cudaFree(_gpuDiagPos);
+	cudaFree(_gpuColumnPtr);
 }
 
 //TODO host thread ?!
@@ -563,27 +612,26 @@ double* GPUSparse::getColumnDouble(int columnIdx) const
 		}
 	}
 
-	double* _gpuColumn;
-	cudaMalloc((void**) &_gpuColumn, dim*sizeof(double));
 	int* _gpuNumOnes;
 	cudaMalloc((void**) &_gpuNumOnes, sizeof(int));
-	cudaMemcpy(_gpuColumn, column, dim*sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(_gpuColumnPtr, column, dim*sizeof(double), cudaMemcpyHostToDevice);
 
 	const int numThreads = 512;
 	const int numBlocks = 1;
-	columnWriteKernelDouble<<<numBlocks, numThreads>>>(_gpuColumn, _gpuColIdx, _gpuRowPtr, _gpuNumOnes, columnIdx, dim);
+	columnWriteKernelDouble<<<numBlocks, numThreads>>>(_gpuColumnPtr, _gpuColIdx, _gpuRowPtr, _gpuNumOnes, columnIdx, dim);
 
 	//testing
 	if(false)
 	{
-		cudaMemcpy(column, _gpuColumn, dim*sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(column, _gpuColumnPtr, dim*sizeof(double), cudaMemcpyDeviceToHost);
 		Tester::testColumn(dissimilarMap, Helper::downloadGPUArrayInt(_gpuRowPtr, dim+1), Helper::downloadGPUArrayInt(_gpuColIdx, getNNZ()),
 					columnIdx, dim, column);
 	}
 
+	cudaFree(_gpuNumOnes);
 	delete[] column;
 
-	return _gpuColumn;
+	return _gpuColumnPtr;
 }
 
 char* GPUSparse::getMatrAsArray()
@@ -632,6 +680,36 @@ unsigned int GPUSparse::getNNZ() const
 	return num_similar * 2 + dim;
 }
 
+void GPUSparse::fillRandomCompareIndices(int* idx1, int* idx2, int* res, const int k) const
+{
+	initKernel<<<256, 256>>>(res, 0, k); //TODO necessary to initialize res ?
+
+	initKernel<<<256, 256>>>(idx1, dim+1, k);
+
+	initKernel<<<256, 256>>>(idx2, dim+1, k);
+
+	cudaDeviceSynchronize();
+	CUDA_CHECK_ERROR()
+
+	const int numThreads = 256;
+	const int numBlocks = 1 + (numThreads/k);
+
+	curandState *devStates;
+
+	cudaMalloc((void **)&devStates, numThreads * numBlocks *  sizeof(curandState));
+
+	float* test;
+	cudaMalloc((void**) &test, sizeof(float)*k);
+
+	randomComparisonFillKernel<<<numBlocks, numThreads>>>(test, idx1, idx2, _gpuRowPtr, _gpuColIdx, k, dim, devStates);
+	CUDA_CHECK_ERROR()
+
+	Helper::printGpuArray(idx1, k, "i:");
+	Helper::printGpuArray(idx2, k, "j:");
+	Helper::printGpuArrayF(test, k, "rands");
+
+}
+
 void GPUSparse::logSimilarToFile(const char *path, ImageHandler* iHandler) const
 {
 	std::ofstream file;
@@ -677,10 +755,5 @@ void GPUSparse::logSimilarToFile(const char *path, ImageHandler* iHandler) const
 	free(h_colIdx);
 
 	file.close();
-
-	printf("ERROR: LOGGING NOT IMPLEMENTED YET :/\n");
-
-
-	//TODO
 }
 

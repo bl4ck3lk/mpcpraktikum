@@ -68,7 +68,7 @@ void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 		int* h_idx1 = Helper::downloadGPUArrayInt(d_idx1, arraySize);
 		int* h_res = Helper::downloadGPUArrayInt(d_res, arraySize);
 		//random seed
-		srand (time(NULL));
+		//srand (time(NULL));
 		int rndRes;
 
 		for(int i = 0; i < arraySize && h_idx1[i] < T->getDimension(); i++)
@@ -80,8 +80,8 @@ void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 		//upload Result
 		Helper::cudaMemcpyArrayInt(h_res, d_res, arraySize);
 
-		delete[] h_idx1;
-		delete[] h_res;
+		free(h_idx1);
+		free(h_res);
 	}
 }
 

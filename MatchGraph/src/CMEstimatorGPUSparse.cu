@@ -108,9 +108,6 @@ CMEstimatorGPUSparse::CMEstimatorGPUSparse() {
 	d_idx2 = NULL;
 	d_res = NULL;
 
-	res = NULL; //todo remove me (testing)
-	idx1 = NULL; //todo remove me (testing)
-
 	/* cula initialization */
 	initCula();
 }
@@ -121,7 +118,6 @@ CMEstimatorGPUSparse::~CMEstimatorGPUSparse() {
 	if (d_idx1 != NULL) cudaFree(d_idx1);
 	if (d_idx2 != NULL) cudaFree(d_idx2);
 	if (d_res != NULL) cudaFree(d_res);
-	if (res != NULL) free(res);
 }
 
 int* CMEstimatorGPUSparse::getIdx1Ptr()
@@ -152,32 +148,6 @@ void CMEstimatorGPUSparse::initCula()
 //	culaSparseSetCudaDevicePlatform(handle, plan, 0); //use the CUDA-device platform (interprets given pointer as device pointers)
 //	culaSparseSetCgSolver(handle, plan, 0); //associate CG solver with the plan
 //	culaSparseSetJacobiPreconditioner(handle, plan, 0); //associate jacobi preconditioner with the plan
-}
-
-//todo remove me. only for testing purpose.
-int* CMEstimatorGPUSparse::getResHostPtr(int dim)
-{
-	if (res != NULL) free(res);
-	res = (int*)malloc(dim*sizeof(int));
-
-	cudaMemcpy(res, d_res, dim*sizeof(int), cudaMemcpyDeviceToHost);
-	return res;
-}
-
-//todo remove me. only for testing purpose.
-int* CMEstimatorGPUSparse::getIdx1HostPtr(int dim)
-{
-	if (idx1 != NULL) free(idx1);
-	idx1 = (int*)malloc(dim*sizeof(int));
-
-	cudaMemcpy(idx1, d_idx1, dim*sizeof(int), cudaMemcpyDeviceToHost);
-	return idx1;
-}
-
-//todo remove me. only for testing purpose
-void CMEstimatorGPUSparse::setResDevicePtr(int* res, int dim)
-{
-	cudaMemcpy(d_res, res, dim*sizeof(int), cudaMemcpyHostToDevice);
 }
 
 //Allocate device memory for index pointers and clear last used pointers
@@ -310,63 +280,79 @@ void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int 
 	config.maxRuntime = 1;
 	config.useBestAnswer = 1;
 
-
 	culaSparseSetCgSolver(handle, plan, 0); //associate CG solver with the plan
 	culaSparseSetJacobiPreconditioner(handle, plan, 0); //associate jacobi preconditioner with the plan
 
 	int noError = 0;
 	int solverTrials = 0;
 	int determinedIndicesByNow = 0;
+	int column = rand() % dim;
+	int xBestForThisColumn = kBest*0.01;
+	char* colsVisited = (char*)malloc(sizeof(char)*dim);
+	memset(colsVisited, 0, dim);
 	//printf("[CMESTIMATOR]: Solve Eq. system column by column.\n");
 	int start_s_CULA = clock();
-	for(int i = 0; i < (dim-1) && countIndices < kBest; i++) //if enough values are gathered, stop computation
+	for(int i = 0; i < (dim) && countIndices < kBest; i++) //if enough values are gathered, stop computation
 	{
 		//0. determine number of best values for this column
 		//The bigger i, the less best indices are determined for this column
-		int xBestForThisColumn = ((dim-i)/(0.5*dim*(dim-1))) * kBest;
+//		int xBestForThisColumn = ((dim-i)/(0.5*dim*(dim-1))) * kBest;
 		if (!xBestForThisColumn) xBestForThisColumn = 1; //at least 1 per column
-		//take into account that probably not as many indices as needed can be determined, so try o get them in the next column
+		//take into account that probably not as many indices as needed can be determined, so try to get them in the next column
 		int determineXforThisColumn = xBestForThisColumn + (determinedIndicesByNow - countIndices);
 		//1. Compute confidence measure for this column (solve Ax=b)
 
-		d_b = T_sparse->getColumnDouble(i);
+		d_b = T_sparse->getColumnDouble(column);
+		colsVisited[column] = 1;
 
 		culaSparseStatus res = computeConfidenceMeasure(handle, plan, config, dim, nnz, d_values, d_rowPtr, d_colIdx, d_x, d_b);
 
-
 		solverTrials++;
+
 		if(res == culaSparseUnspecifiedError || res == culaSparseRuntimeError || res == culaSparseInteralError)
 		{
 			//A bad CULA error occurred
 
 			if(res == culaSparseRuntimeError)
 			{
-				printf("CULA Runtime Error\n");
+				printf("Exiting due to CULA Runtime Error\n");
+			}
+			else
+			{
+				printf("Exiting due to CULA internal or unspecified ERROR!\n");
 			}
 
-			printf("Exiting due to CULA ERROR!\n");
 			T_sparse->print();
-
 			exit(EXIT_FAILURE);
 		}
 		else
 		{
-
 			if(res == culaSparseNoError)
 				noError++;
 
 			//2. get indices of x best confidence measure values
-			int writtenIndices = determineBestConfMeasures(d_x, d_b, i, dim, kBest, determineXforThisColumn, countIndices);
+			int writtenIndices = determineBestConfMeasures(d_x, d_b, column, dim, kBest, determineXforThisColumn, countIndices);
 			countIndices += writtenIndices;
 
 		}
 
-		cudaFree(d_b);
+		//cudaFree(d_b);
 
 		determinedIndicesByNow += xBestForThisColumn; // #indices that should have been determined
 
+		column = rand() % dim;
+		const int startCol = column;
+		while(colsVisited[column] == 1)
+		{
+			column = (column + 1) % dim;
+			if(column == startCol)
+				break;
+		}
+
 //		printf("Column %i, try to determine %i best values. Actually determined by now %i values\n", i, determineXforThisColumn, countIndices);
 	}
+
+	free(colsVisited);
 
 	int stop_s_CULA=clock();
 	std::cout << "time Solving: " << (stop_s_CULA-start_s_CULA)/double(CLOCKS_PER_SEC)*1000 << std::endl;
@@ -427,18 +413,12 @@ culaSparseStatus CMEstimatorGPUSparse::computeConfidenceMeasure(culaSparseHandle
 		printf("%s\n", buffer);
 	}
 
-	//print resulting vector x if needed
-	if (false)
-	{
-		float* h_x = new float[dim];
-		cudaMemcpy(h_x, x, dim * sizeof(float), cudaMemcpyDeviceToHost);
-		printf("X = [");
-		for (int i = 0; i < dim; i++)
-		{
-			printf(" %f ", h_x[i]);
-		}
-		printf("]\n");
-	}
 	return status;
+}
+
+void CMEstimatorGPUSparse::computeRandomComparisons(MatrixHandler* T, const int k)
+{
+	GPUSparse* matrix = dynamic_cast<GPUSparse*>(T);
+	matrix->fillRandomCompareIndices(d_idx1, d_idx2, d_res, k);
 }
 
