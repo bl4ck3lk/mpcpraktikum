@@ -166,7 +166,7 @@ int main(int argc, char** argv)
 	T = new GPUSparse(dim, lambda);
 	GPUSparse* T_sparse = dynamic_cast<GPUSparse*>(T);
 	init = new InitializerGPU();
-	CME = new CMEstimatorGPUSparseMax();
+	CME = new CMEstimatorGPUSparse();
 	comparator = new GPUComparator();
 #else
 	printf("Executing CPU Version.\n");
