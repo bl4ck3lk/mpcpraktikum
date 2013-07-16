@@ -27,6 +27,7 @@
 #include <thrust/copy.h>
 #include <cula_sparse.h>
 #include "Tester.h"
+#include "Helper.h"
 
 #define CUDA_CHECK_ERROR() {							\
     cudaError_t err = cudaGetLastError();					\
@@ -255,6 +256,8 @@ void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int 
 	double* d_x;
 	cudaMalloc((void**) &d_x, dim * sizeof(double));
 
+//	Helper::printGpuArrayD(d_values, nnz, "Values");
+
 	//b-vector
 	double* d_b;
 
@@ -275,10 +278,10 @@ void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int 
 	statCula = culaSparseSetCudaDevicePlatform(handle, plan, &platformOpts);
 
 	culaSparseConfigInit(handle, &config); //initialize config values
-	config.relativeTolerance = 1e-4;
-	config.maxIterations = 50;
-	config.maxRuntime = 1;
-	config.useBestAnswer = 1;
+//	config.relativeTolerance = 1e-4;
+//	config.maxIterations = 50;
+//	config.maxRuntime = 1;
+//	config.useBestAnswer = 1;
 
 	culaSparseSetCgSolver(handle, plan, 0); //associate CG solver with the plan
 	culaSparseSetJacobiPreconditioner(handle, plan, 0); //associate jacobi preconditioner with the plan
@@ -303,6 +306,7 @@ void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int 
 		//1. Compute confidence measure for this column (solve Ax=b)
 
 		d_b = T_sparse->getColumnDouble(column);
+		//Helper::printGpuArrayD(d_b, dim, "B");
 		colsVisited[column] = 1;
 
 		culaSparseStatus res = computeConfidenceMeasure(handle, plan, config, dim, nnz, d_values, d_rowPtr, d_colIdx, d_x, d_b);
@@ -329,6 +333,8 @@ void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int 
 		{
 			if(res == culaSparseNoError)
 				noError++;
+
+//			Helper::printGpuArrayD(d_x, dim, "X");
 
 			//2. get indices of x best confidence measure values
 			int writtenIndices = determineBestConfMeasures(d_x, d_b, column, dim, kBest, determineXforThisColumn, countIndices);
@@ -366,23 +372,6 @@ void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int 
 	thrust::sort_by_key(dp_idx1, dp_idx1 + kBest, dp_idx2); //sort ascending
 	CUDA_CHECK_ERROR()
 
-
-	if (false) //debug printing
-	{
-		int* h_idx1 = new int[kBest];
-		int* h_idx2 = new int[kBest];
-		int* h_res = new int[kBest];
-
-		cudaMemcpy(h_idx1, d_idx1, kBest * sizeof(int), cudaMemcpyDeviceToHost);
-		cudaMemcpy(h_idx2, d_idx2, kBest * sizeof(int), cudaMemcpyDeviceToHost);
-		cudaMemcpy(h_res, d_res, kBest * sizeof(int), cudaMemcpyDeviceToHost);
-
-		printf("Images to be compared:\n");
-		Tester::printArray(h_idx1, kBest);
-		Tester::printArray(h_idx2, kBest);
-		Tester::printArray(h_res, kBest);
-	}
-
 	//clean up the mess
 	cudaFree(d_x);
 	cudaFree(d_values);
@@ -412,6 +401,8 @@ culaSparseStatus CMEstimatorGPUSparse::computeConfidenceMeasure(culaSparseHandle
 		culaSparseGetResultString(handle, &result, buffer, 512);
 		printf("%s\n", buffer);
 	}
+
+
 
 	return status;
 }
