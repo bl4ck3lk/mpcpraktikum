@@ -12,6 +12,7 @@
 #include "Helper.h"
 #include <thrust/sort.h>
 #include <thrust/scan.h>
+#include <fstream>
 
 #define CUDA_SAFE_CALL(err) {							\
 if (cudaSuccess != err)	{						\
@@ -631,8 +632,55 @@ unsigned int GPUSparse::getNNZ() const
 	return num_similar * 2 + dim;
 }
 
-void GPUSparse::logSimilarToFile(char *path) const
+void GPUSparse::logSimilarToFile(const char *path, ImageHandler* iHandler) const
 {
+	std::ofstream file;
+	file.open(path);
+
+	file << iHandler->getDirectoryPath() << "\n";
+
+	const char* f1;
+	const char* f2;
+
+	for(myElemMap::const_iterator it = dissimilarMap.begin();
+			it != dissimilarMap.end(); it++)
+	{
+		const int column = it->first;
+		f1 = iHandler->getImage(column);
+		std::set<int> dis = it->second;
+		for (std::set<int>::const_iterator lIter = dis.begin(); lIter != dis.end(); ++lIter)
+		{
+			f2 = iHandler->getImage(*lIter);
+			file << f1 << "\t" << f2 << "\t-1\n";
+		}
+	}
+
+	int* h_rowPtr = Helper::downloadGPUArrayInt(_gpuRowPtr, dim+1);
+	int* h_colIdx = Helper::downloadGPUArrayInt(_gpuColIdx, getNNZ());
+
+	for(int i = 0; i < dim; i++)
+	{
+		const int start = h_rowPtr[i];
+		const int end = h_rowPtr[i+1];
+		f2 = iHandler->getImage(i);
+		for(int idx = start; idx < end; idx++)
+		{
+			const int column = h_colIdx[idx];
+			if(column == i)
+				continue;
+			f1 = iHandler->getImage(column);
+			file << f1 << "\t" << f2 << "\t1\n";
+		}
+	}
+
+	free(h_rowPtr);
+	free(h_colIdx);
+
+	file.close();
+
 	printf("ERROR: LOGGING NOT IMPLEMENTED YET :/\n");
- //TODO
+
+
+	//TODO
 }
+

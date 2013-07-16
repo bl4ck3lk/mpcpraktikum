@@ -26,15 +26,6 @@
 
 #define GPU_VERSION 1
 
-//TODO clean up classes...
-//TODO timing, evaluation...
-//TODO logging of similarities -> file
-//TODO CULA configuration
-//TODO random steps
-//TODO why does the solver time get higher with more iterations?
-		//Observation: first it gets slower and later sometimes again faster and faster
-//TODO host thread for dissimilar update?
-
 int main(int argc, char** argv)
 {
 
@@ -223,6 +214,8 @@ int main(int argc, char** argv)
 		T_cpu->set(CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest);//host pointer
 #endif
 	}
+
+	T_sparse->logSimilarToFile("log/matchGraph.log", iHandler);
 
 	printf("Resulting Matrix:\n");
 	T->print();

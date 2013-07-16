@@ -18,6 +18,7 @@ class ImageHandler
 		~ImageHandler(); //destructor
 		const char* getImage(int img); //get specific image
 		const char* getFullImagePath(int img);
+		const std::string getDirectoryPath() const;
 		int getTotalNr(); //get total nr of images
 		int getMapSize();
 		void printMap();

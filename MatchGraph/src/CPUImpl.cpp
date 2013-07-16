@@ -214,6 +214,8 @@ void CPUImpl::writeGML(char* filename, bool similar, bool dissimilar, bool poten
 			}
 		}
 	file << "]\n";
+
+	file.close();
 }
 
 
