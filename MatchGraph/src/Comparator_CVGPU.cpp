@@ -67,6 +67,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 
 		std::vector<cv::DMatch> symMatches;
 		match2(i1.descriptors, i2.descriptors, symMatches);
+
 		//		std::cout << ".............." << std::endl;
 
 		//		surf.downloadKeypoints(i1.keypoints, i1.h_keypoints);
@@ -82,9 +83,9 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 
 		float k = (2 * symMatches.size()) / float(i1.descriptors.size().height + i2.descriptors.size().height);
 		//cout << "i1.descriptors.size() " << i1.descriptors.size().height << endl;
-		cout << "k(I_i, I_j) = " << k << endl;
+		//cout << "k(I_i, I_j) = " << k << endl;
 
-		if (k < 0.05)
+		if (k < 0.04)
 		{
 			h_result[i] = 0;
 		}
@@ -94,6 +95,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		}
 		if (showMatches)
 		{
+			//surf.downloadKeypoints(img->keypoints, img->h_keypoints);
 			// Convert keypoints into Point2f
 			std::vector<cv::Point2f> points1, points2;
 			cv::Mat im1 = imread( i1.path, 0 );
@@ -130,7 +132,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 			cv::waitKey();
 		}
 	}
-	//surf.releaseMemory();
+	surf.releaseMemory();
 	// destroy device allocated data?
 	// download result?
 	// ransac??
@@ -144,8 +146,11 @@ IMG ComparatorCVGPU::uploadImage(const int inputImg, SURF_GPU& surf, ImageHandle
 	img->path = iHandler->getFullImagePath(inputImg);
 	cv::Mat imgfile = imread( img->path, 0 );
 	img->im_gpu.upload(imgfile);
+	imgfile.release();  // release memory on the CPU
 	surf(img->im_gpu, cv::gpu::GpuMat(), img->keypoints, img->descriptors, false);
-	surf.downloadKeypoints(img->keypoints, img->h_keypoints);
+	img->im_gpu.release(); // release memory on the GPU
+	img->keypoints.release();
+	//surf.downloadKeypoints(img->keypoints, img->h_keypoints);
 	return *img;
 }
 void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu, 
