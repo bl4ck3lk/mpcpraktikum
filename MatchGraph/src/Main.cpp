@@ -13,6 +13,7 @@
 #include "CPUComparator.h"
 #include "CMEstimatorCPU.h"
 #include "CMEstimatorGPUSparse.h"
+#include "CMEstimatorGPUSparseMax.h"
 #include "Initializer.h"
 #include "InitializerGPU.h"
 #include "InitializerCPU.h"
@@ -165,7 +166,7 @@ int main(int argc, char** argv)
 	T = new GPUSparse(dim, lambda);
 	GPUSparse* T_sparse = dynamic_cast<GPUSparse*>(T);
 	init = new InitializerGPU();
-	CME = new CMEstimatorGPUSparse();
+	CME = new CMEstimatorGPUSparseMax();
 	comparator = new GPUComparator();
 #else
 	printf("Executing CPU Version.\n");
@@ -219,9 +220,6 @@ int main(int argc, char** argv)
 	}
 
 	T_sparse->logSimilarToFile("log/matchGraph.log", iHandler);
-
-	printf("Resulting Matrix:\n");
-	T->print();
 
 	//cleanup
 #if GPU_VERSION
