@@ -149,9 +149,9 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 	initIndexArrays<<<numBlocks, THREADS>>>(d_initIdx1, d_initIdx2, d_initRes, dim, initArraySize);
 	CUDA_CHECK_ERROR()
 
-	int* testResult1 = new int[dim];
-	int* testResult2 = new int[dim];
-	int* testResult3 = new int[initArraySize];
+	int* testResult1 = (int*) malloc(dim*sizeof(int));
+	int* testResult2 = (int*) malloc(dim*sizeof(int));
+	int* testResult3 = (int*) malloc(initArraySize*sizeof(int));
 	//todo remove debug printing
 	if (debugPrint)
 	{
@@ -272,9 +272,9 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 	cudaFree(d_initIdx2);
 	cudaFree(d_initRes);
 
-	delete[] testResult1;
-	delete[] testResult2;
-	delete[] testResult3;
+	free(testResult1);
+	free(testResult2);
+	free(testResult3);
 }
 
 
