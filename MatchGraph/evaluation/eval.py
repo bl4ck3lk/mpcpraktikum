@@ -10,7 +10,7 @@ def read_log_simple(logFile):
     for line in f:
         if line[0].isalnum():
             l = line.split()
-            filesPart = "   ".join(l[0:2])  # tab space
+            filesPart = ":".join(l[0:2])  # tab space
             if l[2] == "-1":
                 dissimilar.append(filesPart)
             else:
@@ -25,10 +25,10 @@ def read_gold_simple(goldFile):
     for line in f:
         if line.startswith("/"):
             clusters.append([])  # new cluster
-            continue
+            #continue
         else:
             l = line.split()
-            filesPart = "   ".join(l[0:2])  # tab space
+            filesPart = ":".join(l[0:2])  # tab space
             clusters[-1].append(filesPart)
     return clusters
 
@@ -124,14 +124,14 @@ def evaluate(gold, system):
         for cluster in gold:
             if s in cluster:
                 tp += 1
-            break
+                break
 
     # false negative, in cluster but system got -1
     for d in dissimilar:
         for cluster in gold:
             if d in cluster:
                 fn += 1
-            break
+                break
 
     # true negative, not in cluster and system got -1
     tn = len(dissimilar) - fn
@@ -156,6 +156,9 @@ if __name__ == "__main__":
     #{'/.../thespire/00001': ['1504224139_f47bd48928_2181_11431482@n00.jpg',...],...}
     #system = read_log("log.txt")
     #{'IMG_9726.ppm': [('IMG_9730.ppm', '-1'),...}
-    system = read_log_simple("matchGraph.log")  # tuple(list(similar), list(dissimilar))
-    gold = read_gold_simple("gold.txt")  # list(list(cluster))
+    system = read_log_simple("matchGraphSandPics.log")  # tuple(list(similar), list(dissimilar))
+    gold = read_gold_simple("goldSandPics.txt")  # list(list(cluster))
+    #import time
+    #t0 = time.clock()
     evaluate(gold, system)
+    #print time.clock() - t0, "seconds process time"
