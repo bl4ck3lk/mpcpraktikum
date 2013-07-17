@@ -1,12 +1,9 @@
-#include <cv.h>
 #include <stdio.h>
 #include <iostream>
 #include <stdlib.h>     /* abs */
 #include <algorithm>    // std::max
-#include <map>
 #include "Comparator_CVGPU.h"
 
-#include <vector>
 // Required to include CUDA vector types
 #include <cuda_runtime.h>
 #include <vector_types.h>
@@ -17,23 +14,31 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/remove.h>
-// End Thrust stuff
-using namespace cv;
-using namespace cv::gpu;
 
 void ratio_aux(int2 * trainIdx1, float2 * distance1, const size_t size1);
+
+//Destructor
+ComparatorCVGPU::~ComparatorCVGPU()
+{
+	//clean up map
+	for(std::map<int, IMG*>::const_iterator iter = comparePairs.begin(); iter != comparePairs.end(); iter++)
+	{
+		iter->second->descriptors.release();
+		delete iter->second;
+	}
+	comparePairs.clear();
+}
 
 // should be modified to: get an array of images, upload them all
 // ? extract all features immediately?
 // match a desired pair using the match2 function
 int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2, int* h_result, int k, bool showMatches, bool drawEpipolar)
 {
-	//std::map< int, IMG> comparePairs;
-	SURF_GPU surf;
+	cv::gpu::SURF_GPU surf;
 	for (int i=0; i < k && h_idx1[i] < iHandler->getTotalNr(); i++) {
-		IMG i1;
-		IMG i2;
-		std::map<int, IMG>::const_iterator it1 = comparePairs.find(h_idx1[i]);
+		IMG* i1;
+		IMG* i2;
+		std::map<int, IMG*>::const_iterator it1 = comparePairs.find(h_idx1[i]);
 		if (it1 == comparePairs.end()) {
 			i1 = uploadImage(h_idx1[i], surf, iHandler);
 			comparePairs.insert(std::make_pair(h_idx1[i], i1));
@@ -42,9 +47,9 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		}
 		else
 		{
-			i1 = (*it1).second;
+			i1 = it1->second;
 		}
-		std::map<int, IMG>::const_iterator it2 = comparePairs.find(h_idx2[i]);
+		std::map<int, IMG*>::const_iterator it2 = comparePairs.find(h_idx2[i]);
 		if (it2 == comparePairs.end()) {
 			i2 = uploadImage(h_idx2[i], surf, iHandler);
 			comparePairs.insert(std::make_pair(h_idx2[i], i2));
@@ -53,11 +58,11 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		}
 		else
 		{
-			i2 = (*it2).second;
+			i2 = it2->second;
 		}
 
 		std::vector<cv::DMatch> symMatches;
-		match2(i1.descriptors, i2.descriptors, symMatches);
+		match2(i1->descriptors, i2->descriptors, symMatches);
 
 
 		//		std::cout << ".............." << std::endl;
@@ -73,7 +78,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		//cv::Mat fundamental = ransacTest(symMatches, i1.h_keypoints, i2.h_keypoints, matches);
 
 
-		float k = (2 * symMatches.size()) / float(i1.descriptors.size().height + i2.descriptors.size().height);
+		float k = (2 * symMatches.size()) / float(i1->descriptors.size().height + i2->descriptors.size().height);
 		//cout << "i1.descriptors.size() " << i1.descriptors.size().height << endl;
 		//cout << "k(I_i, I_j) = " << k << endl;
 
@@ -85,13 +90,18 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		{
 			h_result[i] = 1;
 		}
+
+		//clear vector
+		symMatches.clear();
+
+
 		if (showMatches)
 		{
 			//surf.downloadKeypoints(img->keypoints, img->h_keypoints);
 			// Convert keypoints into Point2f
 			std::vector<cv::Point2f> points1, points2;
-			cv::Mat im1 = imread( i1.path, 0 );
-			cv::Mat im2 = imread( i2.path, 0 );
+			cv::Mat im1 = cv::imread( i1->path, 0 );
+			cv::Mat im2 = cv::imread( i2->path, 0 );
 
 			// resize images
 			//CvSize size1 = cvSize(540, 540);
@@ -103,18 +113,18 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 					it != symMatches.end(); ++it) {
 
 				// Get the position of left keypoints
-				float x = i1.h_keypoints[it->queryIdx].pt.x;
-				float y = i1.h_keypoints[it->queryIdx].pt.y;
+				float x = i1->h_keypoints[it->queryIdx].pt.x;
+				float y = i1->h_keypoints[it->queryIdx].pt.y;
 				points1.push_back(cv::Point2f(x,y));
 				cv::circle(im1,cv::Point(x,y),3,cv::Scalar(255,0,0),2);
 				// Get the position of right keypoints
-				x = i2.h_keypoints[it->trainIdx].pt.x;
-				y = i2.h_keypoints[it->trainIdx].pt.y;
+				x = i2->h_keypoints[it->trainIdx].pt.x;
+				y = i2->h_keypoints[it->trainIdx].pt.y;
 				cv::circle(im2,cv::Point(x,y),3,cv::Scalar(255,0,0),2);
 				points2.push_back(cv::Point2f(x,y));
 			}
 
-			Mat img_matches;
+			cv::Mat img_matches;
 			//cv::drawMatches(im1, im1_keypoints, im2, im2_keypoints, matches, img_matches);
 			//cv::imshow("Matches", img_matches);
 
@@ -123,13 +133,20 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 
 			cv::waitKey();
 		}
+
 	}
 
 	//try to delete something from map if it grows too large
-//	while(comparePairs.size() > 200)
-//	{
-//
-//	}
+	//TODO evaluate if it works well
+	while(comparePairs.size() > 200)
+	{
+		std::map< int, IMG*>::iterator iter = comparePairs.end();
+		iter--;
+		std::cout << " deleting from map " << iter->first << std::endl;
+		iter->second->descriptors.release();
+		delete iter->second;
+		comparePairs.erase(iter);
+	}
 
 	surf.releaseMemory();
 
@@ -141,10 +158,10 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 	return 1;
 }
 
-IMG ComparatorCVGPU::uploadImage(const int inputImg, SURF_GPU& surf, ImageHandler* iHandler) {
+IMG* ComparatorCVGPU::uploadImage(const int inputImg, cv::gpu::SURF_GPU& surf, ImageHandler* iHandler) {
 	struct IMG* img = new IMG();
 	img->path = iHandler->getFullImagePath(inputImg);
-	cv::Mat imgfile = imread( img->path, 0 );
+	cv::Mat imgfile = cv::imread( img->path, 0 );
 	img->im_gpu.upload(imgfile);
 	imgfile.release();  // release memory on the CPU
 	surf(img->im_gpu, cv::gpu::GpuMat(), img->keypoints, img->descriptors, false);
@@ -153,7 +170,7 @@ IMG ComparatorCVGPU::uploadImage(const int inputImg, SURF_GPU& surf, ImageHandle
 	//surf.downloadKeypoints(img->keypoints, img->h_keypoints);
 
 	//std::cout << "descriptor size " << img->descriptors.size() << std::endl;
-	return *img;
+	return img;
 }
 void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu, 
 		cv::gpu::GpuMat& im2_descriptors_gpu,
@@ -211,6 +228,8 @@ void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu,
 	// 4. Remove non-symmetrical matches
 
 	symmetryTest(matches1,matches2,symMatches);
+
+	matcher.clear();
 	//symmetryTest(convertedMatches1,convertedMatches2,symMatches);
 	//	std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
 }
@@ -285,7 +304,7 @@ void ComparatorCVGPU::symmetryTest(const std::vector< std::vector<cv::DMatch> >&
 }
 
 // Identify good matches using RANSAC
-// Return fundemental matrix
+// Return fundamental matrix
 cv::Mat ComparatorCVGPU::ransacTest(const std::vector<cv::DMatch>& matches,
 		const std::vector<cv::KeyPoint>& keypoints1,
 		const std::vector<cv::KeyPoint>& keypoints2,
@@ -305,9 +324,9 @@ cv::Mat ComparatorCVGPU::ransacTest(const std::vector<cv::DMatch>& matches,
 		y = keypoints2[it->trainIdx].pt.y;
 		points2.push_back(cv::Point2f(x,y));
 	}
-	float confidence = 0.98;
-	float distance = 3.0;
-	bool refineF = false;
+	const float confidence = 0.98;
+	const float distance = 3.0;
+	const bool refineF = false;
 	// Compute F matrix using RANSAC
 	std::vector<uchar> inliers(points1.size(),0);
 	cv::Mat fundamental = cv::findFundamentalMat(

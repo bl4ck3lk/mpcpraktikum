@@ -441,7 +441,6 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	numThreads = 128;
 	numBlocks = dim;
 	int gridDim = 1 + sqrt(dim);
-	printf("gridDim = %i\n", gridDim);
 	dim3 blockGrid(gridDim,gridDim);
 	colIdxIncrementKernel<<<blockGrid, numThreads>>>(newColIdx, _gpuColIdx, _gpuRowPtr, prefixRowIncr, dim);
 	CUDA_CHECK_ERROR()
