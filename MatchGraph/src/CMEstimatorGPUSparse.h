@@ -21,11 +21,8 @@ public:
 	int* getIdx2Ptr();
 	int* getResPtr();
 
-	int* getIdx1HostPtr(int dim); //todo only for testing purpose
-	int* getResHostPtr(int dim); //todo only for testing purpose
-	void setResDevicePtr(int* res, int dim); //todo only for testing purpose
-
 	void getKBestConfMeasures(MatrixHandler* T, float* F, int kBest);
+	void computeRandomComparisons(MatrixHandler* T, const int k);
 
 private:
 	int lastSize;

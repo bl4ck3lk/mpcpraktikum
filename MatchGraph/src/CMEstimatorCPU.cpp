@@ -124,3 +124,8 @@ void CMEstimatorCPU::initIdxArrays(int arraySize, int dim)
 		res[i] = 0;
 	}
 }
+
+void CMEstimatorCPU::computeRandomComparisons(MatrixHandler* T, const int k)
+{
+	//todo
+}

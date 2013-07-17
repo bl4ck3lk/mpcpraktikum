@@ -25,20 +25,22 @@ GPUComparator::GPUComparator()
 
 GPUComparator::~GPUComparator()
 {
-	if (h_idx1 != NULL) delete[] h_idx1;
-	if (h_idx2 != NULL) delete[] h_idx2;
-	if (h_res != NULL) delete[] h_res;
+	if (h_idx1 != NULL) free(h_idx1);
+	if (h_idx2 != NULL) free(h_idx2);
+	if (h_res != NULL) free(h_res);
+
+	delete openCVcomp;
 }
 
 void GPUComparator::initArrays(int arraySize)
 {
-	if (h_idx1 != NULL) delete[] h_idx1;
-	if (h_idx2 != NULL) delete[] h_idx2;
-	if (h_res != NULL) delete[] h_res;
+	if (h_idx1 != NULL) free(h_idx1);
+	if (h_idx2 != NULL) free(h_idx2);
+	if (h_res != NULL) free(h_res);
 
-	h_idx1 = new int[arraySize];
-	h_idx2 = new int[arraySize];
-	h_res = new int[arraySize];
+	h_idx1 = (int*) malloc(arraySize*sizeof(int));
+	h_idx2 = (int*) malloc(arraySize*sizeof(int));
+	h_res = (int*)  malloc(arraySize*sizeof(int));
 }
 
 void GPUComparator::setRandomMode(bool mode)
@@ -57,7 +59,7 @@ void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 		h_res = Helper::downloadGPUArrayInt(d_res, arraySize);
 
 		printf("Comparing %i images with OpenCV_GPU...\n", arraySize);
-		openCVcomp->compareGPU(iHandler, h_idx1, h_idx2, h_res, arraySize, true, false);
+		openCVcomp->compareGPU(iHandler, h_idx1, h_idx2, h_res, arraySize, false, false);
 
 		//upload Result
 		Helper::cudaMemcpyArrayInt(h_res, d_res, arraySize);
@@ -68,7 +70,7 @@ void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 		int* h_idx1 = Helper::downloadGPUArrayInt(d_idx1, arraySize);
 		int* h_res = Helper::downloadGPUArrayInt(d_res, arraySize);
 		//random seed
-		srand (time(NULL));
+		//srand (time(NULL));
 		int rndRes;
 
 		for(int i = 0; i < arraySize && h_idx1[i] < T->getDimension(); i++)
@@ -80,8 +82,8 @@ void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 		//upload Result
 		Helper::cudaMemcpyArrayInt(h_res, d_res, arraySize);
 
-		delete[] h_idx1;
-		delete[] h_res;
+		free(h_idx1);
+		free(h_res);
 	}
 }
 

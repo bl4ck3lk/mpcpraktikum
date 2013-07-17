@@ -68,6 +68,20 @@ void Helper::printGpuArrayD(double * devPtr, const int size, std::string message
 	free(cpu);
 }
 
+void Helper::printGpuArrayL(long * devPtr, const int size, std::string message)
+{
+	long* cpu = (long*) malloc(sizeof(long)*size);
+	cudaMemcpy(cpu, devPtr, size*sizeof(long), cudaMemcpyDeviceToHost);
+
+#if CHECK_FOR_CUDA_ERROR
+	CUDA_CHECK_ERROR()
+#endif
+
+	std::cout << message << " : ";
+	Tester::printArrayLong(cpu, size);
+	free(cpu);
+}
+
 int* Helper::downloadGPUArrayInt(int* devPtr, const int size)
 {
 	int* cpu = (int*) malloc(sizeof(int)*size);

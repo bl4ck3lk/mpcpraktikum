@@ -18,28 +18,41 @@
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/nonfree/gpu.hpp>
 #include <vector>
+#include <string>
+#include <map>
 
-class ComparatorCVGPU {
+struct IMG
+{
+	cv::gpu::GpuMat descriptors; // the descriptors for matching. Kept on GPU
+	cv::gpu::GpuMat im_gpu; // the image. Will be deleted after usage!
+	cv::gpu::GpuMat keypoints; //will be deleted after usage!
+	std::vector<cv::KeyPoint> h_keypoints; //only for debugging
+	std::vector<float> h_descriptors; //only for debugging
+	std::string path; //only for debugging
+};
+
+class ComparatorCVGPU
+{
+private:
+	std::map<int, IMG*> comparePairs;
+
 public:
+	~ComparatorCVGPU();
 	//int compareGPU(char* img1, char* img2, bool showMatches=true, bool drawEpipolar=false);
-    	int compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2, int* h_result, int k, bool showMatches, bool drawEpipolar);
-    	int ratioTest(std::vector< std::vector<cv::DMatch> >& matches);
-    
-	void symmetryTest(const std::vector< std::vector<cv::DMatch> >& matches1,
-                      const std::vector< std::vector<cv::DMatch> >& matches2,
-                      std::vector<cv::DMatch>& symMatches);
-    
-    	cv::Mat ransacTest(const std::vector<cv::DMatch>& matches,
-                       const std::vector<cv::KeyPoint>& keypoints1,
-                       const std::vector<cv::KeyPoint>& keypoints2,
-                       std::vector<cv::DMatch>& outMatches);
+	int compareGPU(ImageHandler* iHandler, int* h_idx1, int* h_idx2, int* h_result, int k, bool showMatches,
+			bool drawEpipolar);
+	int ratioTest(std::vector<std::vector<cv::DMatch> >& matches);
 
-	void match2(cv::gpu::GpuMat& im1_descriptors_gpu, 
-				cv::gpu::GpuMat& im2_descriptors_gpu,
-				std::vector<cv::DMatch>& symMatches);
+	void symmetryTest(const std::vector<std::vector<cv::DMatch> >& matches1,
+			const std::vector<std::vector<cv::DMatch> >& matches2, std::vector<cv::DMatch>& symMatches);
 
-	struct IMG uploadImage(const int img, cv::gpu::SURF_GPU& surf, ImageHandler* iHandler);
-	~ComparatorCVGPU(){};
+	cv::Mat ransacTest(const std::vector<cv::DMatch>& matches, const std::vector<cv::KeyPoint>& keypoints1,
+			const std::vector<cv::KeyPoint>& keypoints2, std::vector<cv::DMatch>& outMatches);
+
+	void match2(cv::gpu::GpuMat& im1_descriptors_gpu, cv::gpu::GpuMat& im2_descriptors_gpu,
+			std::vector<cv::DMatch>& symMatches);
+
+	struct IMG* uploadImage(const int img, cv::gpu::SURF_GPU& surf, ImageHandler* iHandler);
 };
 
 #endif /* COMPARATORCVGPU_H_ */

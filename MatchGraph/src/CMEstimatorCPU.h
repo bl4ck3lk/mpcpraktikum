@@ -16,6 +16,7 @@ public:
 	CMEstimatorCPU();
 
 	void getKBestConfMeasures(MatrixHandler* T, float* F, int kBest);
+	void computeRandomComparisons(MatrixHandler* T, const int k);
 
 	~CMEstimatorCPU();
 

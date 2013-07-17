@@ -13,6 +13,7 @@
 #include "CPUComparator.h"
 #include "CMEstimatorCPU.h"
 #include "CMEstimatorGPUSparse.h"
+#include "CMEstimatorGPUSparseMax.h"
 #include "Initializer.h"
 #include "InitializerGPU.h"
 #include "InitializerCPU.h"
@@ -28,6 +29,7 @@
 
 int main(int argc, char** argv)
 {
+	srand((unsigned int)time(NULL));
 
 	char* usageBuff = new char[1024];
 	strcpy(usageBuff, "Usage: <path> <ext> <iter> [<k>] [<lambda>]\n"
@@ -199,6 +201,8 @@ int main(int argc, char** argv)
 
 #if GPU_VERSION
 		//get the next images that should be compared (implicitly solving eq. system => confidence measure matrix)
+//		if(i < 0)
+//			CME->computeRandomComparisons(T, kBest);
 		CME->getKBestConfMeasures(T, NULL, kBest);
 		//compare images which are located in the device arrays of CME
 		comparator->doComparison(iHandler, T, CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest); //device pointer
@@ -217,9 +221,6 @@ int main(int argc, char** argv)
 
 	T_sparse->logSimilarToFile("log/matchGraph.log", iHandler);
 
-	printf("Resulting Matrix:\n");
-	T->print();
-
 	//cleanup
 #if GPU_VERSION
 	delete T_sparse;
@@ -227,7 +228,7 @@ int main(int argc, char** argv)
 
 #endif
 	delete init;
-	delete usageBuff;
+	delete[] usageBuff;
 	delete CME;
 	delete comparator;
 

@@ -23,6 +23,7 @@ public:
 	static void printGpuArray(int* devPtr, const int size, const std::string message);
 	static void printGpuArrayF(float* devPtr, const int size, const std::string message);
 	static void printGpuArrayD(double * devPtr, const int size, std::string message);
+	static void printGpuArrayL(long * devPtr, const int size, std::string message);
 };
 
 #endif /* HELPER_H_ */

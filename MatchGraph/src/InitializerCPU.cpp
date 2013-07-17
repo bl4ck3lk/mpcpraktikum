@@ -44,9 +44,6 @@ void InitializerCPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 	std::set<long> initIndices;
 	std::multimap<int, int> indicesXY; //sorted by idx1 (multiple keys allowed)
 
-	//random seed
-	srand (time(NULL));
-
 	//generate random indices
 	long rnd;
 	int count = 0;
