@@ -655,8 +655,8 @@ void GPUSparse::print()
 {
 	printf("###INFO about SPARSE MATRIX###\n");
 	printf("dim = %i, lambda = %f, nnz = %i \n", dim, lambda, getNNZ());
-	Helper::printGpuArray(_gpuColIdx, getNNZ(), "colIdx (on GPU)");
-	Helper::printGpuArray(_gpuRowPtr, dim+1, "rowPtr (on GPU)");
+	//Helper::printGpuArray(_gpuColIdx, getNNZ(), "colIdx (on GPU)");
+	//Helper::printGpuArray(_gpuRowPtr, dim+1, "rowPtr (on GPU)");
 }
 
 void GPUSparse::writeGML(char * filename, bool similar, bool dissimilar,
@@ -706,8 +706,7 @@ void GPUSparse::fillRandomCompareIndices(int* idx1, int* idx2, int* res, const i
 
 	Helper::printGpuArray(idx1, k, "i:");
 	Helper::printGpuArray(idx2, k, "j:");
-	Helper::printGpuArrayF(test, k, "rands");
-
+	Helper::printGpuArrayF(test, k, "rand gpu");
 }
 
 void GPUSparse::logSimilarToFile(const char *path, ImageHandler* iHandler) const

@@ -18,8 +18,23 @@
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/nonfree/gpu.hpp>
 #include <vector>
+#include <string>
+#include <map>
+
+struct IMG {
+	cv::gpu::GpuMat descriptors; // kept on GPU!
+	cv::gpu::GpuMat im_gpu; // the image. Will be deleted after usage!
+	cv::gpu::GpuMat keypoints; //will be deleted after usage
+	std::vector<cv::KeyPoint> h_keypoints; //only for debugging
+	std::vector<float> h_descriptors; //only for debugging
+	std::string path; //only for debugging
+};
 
 class ComparatorCVGPU {
+private:
+	std::map< int, IMG> comparePairs;
+	std::map<int, int> testMap;
+
 public:
 	//int compareGPU(char* img1, char* img2, bool showMatches=true, bool drawEpipolar=false);
     	int compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2, int* h_result, int k, bool showMatches, bool drawEpipolar);

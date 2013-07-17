@@ -206,6 +206,8 @@ int CMEstimatorGPUSparse::determineBestConfMeasures(double* xColumnDevice, doubl
 	thrust::sort_by_key(dp_xColumn, dp_xColumn + dim, dp_gpuIndices, thrust::greater<double>());
 	CUDA_CHECK_ERROR();
 
+//	Helper::printGpuArrayD(xColumnDevice, 10, "Top10");
+
 	//maybe recast pointers? (from thrust)
 	//unsigned int * raw_ptr = thrust::raw_pointer_cast(dev_data_ptr);
 
@@ -290,7 +292,7 @@ void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int 
 	int solverTrials = 0;
 	int determinedIndicesByNow = 0;
 	int column = rand() % dim;
-	int xBestForThisColumn = kBest*0.01;
+	int xBestForThisColumn = kBest*0.001;
 	char* colsVisited = (char*)malloc(sizeof(char)*dim);
 	memset(colsVisited, 0, dim);
 	//printf("[CMESTIMATOR]: Solve Eq. system column by column.\n");

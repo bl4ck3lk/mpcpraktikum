@@ -18,47 +18,38 @@
 #include <thrust/device_vector.h>
 #include <thrust/remove.h>
 // End Thrust stuff
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
 void ratio_aux(int2 * trainIdx1, float2 * distance1, const size_t size1);
-
-struct IMG {
-	cv::gpu::GpuMat im_gpu;
-	cv::gpu::GpuMat keypoints, descriptors;
-	std::vector<cv::KeyPoint> h_keypoints;
-	std::vector<float> h_descriptors;
-	string path;
-};
 
 // should be modified to: get an array of images, upload them all
 // ? extract all features immediately?
 // match a desired pair using the match2 function
 int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2, int* h_result, int k, bool showMatches, bool drawEpipolar)
 {
-	std::map< int, IMG > comparePairs;
+	//std::map< int, IMG> comparePairs;
 	SURF_GPU surf;
 	for (int i=0; i < k && h_idx1[i] < iHandler->getTotalNr(); i++) {
 		IMG i1;
 		IMG i2;
-		std::map<int, IMG>::iterator it1 = comparePairs.find(h_idx1[i]);
+		std::map<int, IMG>::const_iterator it1 = comparePairs.find(h_idx1[i]);
 		if (it1 == comparePairs.end()) {
 			i1 = uploadImage(h_idx1[i], surf, iHandler);
 			comparePairs.insert(std::make_pair(h_idx1[i], i1));
 
-			//			std::cout << "Picture inserted : " << h_idx1[i] << std::endl;
+//						std::cout << "Picture inserted : " << h_idx1[i] << std::endl;
 		}
 		else
 		{
 			i1 = (*it1).second;
 		}
-		std::map<int, IMG>::iterator it2 = comparePairs.find(h_idx2[i]);
+		std::map<int, IMG>::const_iterator it2 = comparePairs.find(h_idx2[i]);
 		if (it2 == comparePairs.end()) {
 			i2 = uploadImage(h_idx2[i], surf, iHandler);
 			comparePairs.insert(std::make_pair(h_idx2[i], i2));
 
-			//			std::cout << "Picture inserted : " << h_idx2[i] << std::endl;
+//						std::cout << "Picture inserted : " << h_idx2[i] << std::endl;
 		}
 		else
 		{
@@ -67,6 +58,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 
 		std::vector<cv::DMatch> symMatches;
 		match2(i1.descriptors, i2.descriptors, symMatches);
+
 
 		//		std::cout << ".............." << std::endl;
 
@@ -132,7 +124,15 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 			cv::waitKey();
 		}
 	}
+
+	//try to delete something from map if it grows too large
+//	while(comparePairs.size() > 200)
+//	{
+//
+//	}
+
 	surf.releaseMemory();
+
 	// destroy device allocated data?
 	// download result?
 	// ransac??
@@ -151,6 +151,8 @@ IMG ComparatorCVGPU::uploadImage(const int inputImg, SURF_GPU& surf, ImageHandle
 	img->im_gpu.release(); // release memory on the GPU
 	img->keypoints.release();
 	//surf.downloadKeypoints(img->keypoints, img->h_keypoints);
+
+	//std::cout << "descriptor size " << img->descriptors.size() << std::endl;
 	return *img;
 }
 void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu, 

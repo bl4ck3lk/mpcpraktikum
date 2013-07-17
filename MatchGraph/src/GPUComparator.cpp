@@ -57,7 +57,7 @@ void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 		h_res = Helper::downloadGPUArrayInt(d_res, arraySize);
 
 		printf("Comparing %i images with OpenCV_GPU...\n", arraySize);
-		openCVcomp->compareGPU(iHandler, h_idx1, h_idx2, h_res, arraySize, true, false);
+		openCVcomp->compareGPU(iHandler, h_idx1, h_idx2, h_res, arraySize, false, false);
 
 		//upload Result
 		Helper::cudaMemcpyArrayInt(h_res, d_res, arraySize);
