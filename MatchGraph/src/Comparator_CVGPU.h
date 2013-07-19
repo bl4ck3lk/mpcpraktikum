@@ -39,12 +39,12 @@ private:
 	int onGpuCounter;
 	int allowedOnGpu;
 
+
 public:
 	ComparatorCVGPU();
 	~ComparatorCVGPU();
 	//int compareGPU(char* img1, char* img2, bool showMatches=true, bool drawEpipolar=false);
-	int compareGPU(ImageHandler* iHandler, int* h_idx1, int* h_idx2, int* h_result, int k, bool showMatches,
-			bool drawEpipolar);
+	int compareGPU(ImageHandler* iHandler, int* h_idx1, int* h_idx2, int* h_result, int k, bool showMatches);
 	int ratioTest(std::vector<std::vector<cv::DMatch> >& matches);
 
 	void symmetryTest(const std::vector<std::vector<cv::DMatch> >& matches1,
@@ -58,7 +58,8 @@ public:
 
 	struct IMG* uploadImage(const int img, cv::gpu::SURF_GPU& surf, ImageHandler* iHandler);
 
-	void cleanMap(int notAllowedI2);
+	void cleanMap(int notAllowedI2=NULL, const int proportion=10);
+	void showPair(IMG& img1, IMG& img2, std::vector<cv::DMatch>& symMatches);
 };
 
 #endif /* COMPARATORCVGPU_H_ */
