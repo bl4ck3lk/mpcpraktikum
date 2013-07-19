@@ -33,42 +33,6 @@ def read_gold_simple(goldFile):
     return clusters
 
 
-# def read_log(logFile):
-#
-#     f = open(logFile)
-#     column1 = []
-#     column2 = []
-#     result = []
-#     system = {}
-#     for line in f:
-#         if not line.startswith("/"):
-#             l = line.split()
-#             column1.append(l[0])
-#             column2.append(l[1])
-#             result.append(l[2])
-#     #print column1
-#     #print column2
-#     #print result
-#     #print zip(column1, column2, result )
-#     f.close()
-#
-#     c1 = zip(column1,result)
-#     c2 = zip(column2,result)
-#     for i in range(len(column1)):
-#         if system.has_key(column1[i]):
-#             system[column1[i]].append(c2[i])
-#         else:
-#             system[column1[i]] = [c2[i]]
-#     for i in range(len(column2)):
-#         if system.has_key(column2[i]):
-#             system[column2[i]].append(c1[i])
-#         else:
-#             system[column2[i]] = [c1[i]]
-#     #print system
-#     return system
-#     #for key, value in system.iteritems():
-#     #    print key, value
-
 def get_gold(path, outputFile):
     """
     read gold file into data structures
@@ -80,7 +44,6 @@ def get_gold(path, outputFile):
     for root, dirnames, filenames in os.walk(path):
         for filename in fnmatch.filter(filenames, '*.jpg'):
             files.append(os.path.join(root, filename))
-        #print files
 
     # stores the data into dict based on path:file
     datadict = {}
@@ -94,7 +57,6 @@ def get_gold(path, outputFile):
     output = open(outputFile, 'w')
     for key in datadict.iterkeys():
         fs = datadict[key]
-        #print "dir: " + key
         output.write(key + "\n")
         for f in fs:
             for f2 in fs:
@@ -103,8 +65,6 @@ def get_gold(path, outputFile):
     output.close()
     print "Saved in:",outputFile
     return datadict
-    #for k in datadict.keys():
-    #    print datadict[k]
 
 
 def evaluate(gold, system):
@@ -152,20 +112,18 @@ def evaluate(gold, system):
     print "Recall = %0.2f" %(tp/(tp+fn*1.0))
     print "Accuracy (Hit ratio) = %0.3f" %((tp+tn)/(tp+tn+fp+fn*1.0))
     #print "F-Measure", 2 * ((precision * recall)/(precision + recall))
+
     # sanity check
     if not ((len(similar) + len(dissimilar)) == tp + fn + tn + fp):
         raise Exception("Something gone wrong!")
 
 def usage():
     usage = """
-    -h --help           USAGE: 'python eval.py -g goldFile -s systemOutput' OR 'python eval.py -c clusterRoot'
-    -g --goldlog        path/to/goldstandard/file
-    -s --syslog         path/to/system/output/file
-    -c --cluster        path/to/folder/containing/subfolders (use this param alone)
+    -h --help       USAGE: 'python eval.py -g goldFile -s systemOutput' OR 'python eval.py -c clusterRoot'
+    -g --goldlog    path/to/goldstandard/file
+    -s --syslog     path/to/system/output/file
+    -c --cluster    path/to/folder/containing/subfolders (use this param alone)
     """
-    #print "USAGE: 'python eval.py -g goldFile -s systemOutput'"
-    #print "or...\n to make a new gold file using folders as clusters:"
-    #print "-c path/To/Folder/Containing/Subfolders"
     print usage
 
 def main(argv):
@@ -176,8 +134,10 @@ def main(argv):
             print str(err)
             usage()
             sys.exit(2)
+
         gold = None
         system = None
+
         for o, a in opts:
             if o == "-h":
                 print usage()
@@ -197,15 +157,5 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv)
-    #gold = get_gold("/Users/rodrigpro/Flickr/download_imgs/downloaded")
-    #print gold
-    #{'/.../thespire/00001': ['1504224139_f47bd48928_2181_11431482@n00.jpg',...],...}
-    #system = read_log("log.txt")
-    #{'IMG_9726.ppm': [('IMG_9730.ppm', '-1'),...}
-    ##system = read_log_simple("matchGraphSandPics.log")  # tuple(list(similar), list(dissimilar))
-    ##gold = read_gold_simple("goldSandPics.txt")  # list(list(cluster))
-    #import time
-    #t0 = time.clock()
-    ##evaluate(gold, system)
-    #print time.clock() - t0, "seconds process time"
+
 
