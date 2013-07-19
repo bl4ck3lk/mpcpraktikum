@@ -38,7 +38,8 @@ private:
 	std::map<int, IMG*> comparePairs;
 	int onGpuCounter;
 	int allowedOnGpu;
-
+	cv::gpu::DeviceInfo defInfo;
+	double totalMem;
 
 public:
 	ComparatorCVGPU();
@@ -60,6 +61,7 @@ public:
 
 	void cleanMap(int notAllowedI2=NULL, const int proportion=10);
 	void showPair(IMG& img1, IMG& img2, std::vector<cv::DMatch>& symMatches);
+	double getMemoryLoad();
 };
 
 #endif /* COMPARATORCVGPU_H_ */

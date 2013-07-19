@@ -21,6 +21,8 @@ ComparatorCVGPU::ComparatorCVGPU()
 {
 	allowedOnGpu = 1000;
 	onGpuCounter = 0;
+	cv::gpu::DeviceInfo defInfo(0);
+	double totalMem = (double) defInfo.totalMemory();
 }
 
 //Destructor
@@ -39,15 +41,7 @@ ComparatorCVGPU::~ComparatorCVGPU()
 
 int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2, int* h_result, int k, bool showMatches)
 {
-	//TODO: make it a global variable
-	cv::gpu::DeviceInfo defInfo(0);
-	double total = (double) defInfo.totalMemory();
-	double free = (double) defInfo.freeMemory();
-	printf("Free memory %.3f MB\n", free/1024/1024);
-	printf("Total memory %.3f MB\n", total/1024/1024);
-	double percUsed = (total-free)/total;
-	printf("Percentage of used memory %.2f\n", percUsed);
-	if (percUsed > 0.6f && onGpuCounter > 0)
+	if (getMemoryLoad() > 0.8f && onGpuCounter > 0)
 	{
 		printf("Begin of function. 80%%\n");
 		cleanMap(NULL, 1);
@@ -58,7 +52,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 	for (int i=0; i < k && h_idx1[i] < iHandler->getTotalNr(); i++) {
 		IMG* i1;
 		IMG* i2;
-		if (percUsed > 0.8f && onGpuCounter > 0)
+		if (getMemoryLoad() > 0.8f && onGpuCounter > 0)
 		{
 			printf("Begin of iteration. 80%%\n");
 			cleanMap(NULL, 1);
@@ -142,7 +136,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 			showPair(*i1, *i2, symMatches);
 
 		}
-		if (percUsed > 0.8f && onGpuCounter > 0)
+		if (getMemoryLoad() > 0.8f && onGpuCounter > 0)
 		{
 			printf("End of iteration. 80%%\n");
 			cleanMap(NULL, 1);
@@ -150,21 +144,26 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 	}
 
 	surf.releaseMemory();
-
 	return 1;
 }
 
+double ComparatorCVGPU::getMemoryLoad()
+{
+	double free = (double) defInfo.freeMemory();
+	//printf("Free memory %.3f MB\n", free/1024/1024);
+	//printf("Total memory %.3f MB\n", total/1024/1024);
+	double percUsed = (totalMem-free)/totalMem;
+	//printf("Percentage of used memory %.2f\n", percUsed);
+	return percUsed;
+}
 void ComparatorCVGPU::cleanMap(int notAllowedI2, const int proportion)
 {
 	printf("++GOING TO CLEAN UP onGPU = %i, allowed = %i!\n", onGpuCounter, allowedOnGpu);
-	cv::gpu::DeviceInfo defInfo(0);
 
-	double total = (double) defInfo.totalMemory();
 	double free = (double) defInfo.freeMemory();
-	printf("Free memory %.3f MB\n", free/1024/1024);
-	printf("Total memory %.3f MB\n", total/1024/1024);
-	printf("Percentage of used memory %.2f\n", ((total-free)/total));
-
+	double percUsed = (totalMem-free)/totalMem;
+	printf("Percentage of used memory %.2f\n", percUsed);
+	
 	int toRelease = onGpuCounter/proportion; //TODO how many?
 	printf("Releasing %i\n", toRelease);
 	for (std::map<int, IMG*>::iterator rmIter = comparePairs.begin();
@@ -236,7 +235,8 @@ IMG* ComparatorCVGPU::uploadImage(const int inputImg, cv::gpu::SURF_GPU& surf, I
 		surf(img->im_gpu, cv::gpu::GpuMat(), img->keypoints, img->descriptors, false);
 	} catch (cv::Exception &Exception) {
 		std::cout << "SURF OpenCV exception!" << std::endl;
-		return 0;
+		std::cout << img->path << std::endl;
+		return NULL;
 	}
 	img->im_gpu.release(); // release memory on the GPU
 	img->keypoints.release();
