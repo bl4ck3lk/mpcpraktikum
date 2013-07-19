@@ -1,7 +1,7 @@
 import fnmatch
 import os
-
-__author__ = 'rodrig'
+import sys
+import getopt
 
 def read_log_simple(logFile):
     f = open(logFile)
@@ -69,7 +69,7 @@ def read_gold_simple(goldFile):
 #     #for key, value in system.iteritems():
 #     #    print key, value
 
-def get_gold(path):
+def get_gold(path, outputFile):
     """
     read gold file into data structures
     :rtype : dict
@@ -80,7 +80,7 @@ def get_gold(path):
     for root, dirnames, filenames in os.walk(path):
         for filename in fnmatch.filter(filenames, '*.jpg'):
             files.append(os.path.join(root, filename))
-    #print files
+        #print files
 
     # stores the data into dict based on path:file
     datadict = {}
@@ -91,7 +91,7 @@ def get_gold(path):
         datadict[pathName] = datadict.get(pathName, []) + [fileName]
 
     # writes the data from the dict into a file
-    output = open('gold.txt', 'w')
+    output = open(outputFile, 'w')
     for key in datadict.iterkeys():
         fs = datadict[key]
         #print "dir: " + key
@@ -101,6 +101,7 @@ def get_gold(path):
                 if f != f2:
                     output.write(f + "\t" + f2 + "\n")
     output.close()
+    print "Saved in:",outputFile
     return datadict
     #for k in datadict.keys():
     #    print datadict[k]
@@ -124,7 +125,7 @@ def evaluate(gold, system):
         for cluster in gold:
             if s in cluster:
                 tp += 1
-                break
+                break  # once we found s in some cluster, we don't check other clusters
 
     # false negative, in cluster but system got -1
     for d in dissimilar:
@@ -139,26 +140,72 @@ def evaluate(gold, system):
     # false positive, not in cluster but system got 1
     fp = len(similar) - tp
 
-    print "True Positives", tp/2
-    print "False Negatives", fn/2
-    print "True Negatives", tn/2
-    print "False Positives", fp/2
+    print "True Positives =", tp/2
+    print "False Negatives =", fn/2
+    print "True Negatives =", tn/2
+    print "False Positives =", fp/2
+    print "----------------------"
+    print "Total compared =", (len(similar) + len(dissimilar))/2
+    print "----------------------"
 
+    print "Precision = %0.2f" %(tp/(tp+fp*1.0))
+    print "Recall = %0.2f" %(tp/(tp+fn*1.0))
+    print "Accuracy (Hit ratio) = %0.3f" %((tp+tn)/(tp+tn+fp+fn*1.0))
+    #print "F-Measure", 2 * ((precision * recall)/(precision + recall))
     # sanity check
     if not ((len(similar) + len(dissimilar)) == tp + fn + tn + fp):
         raise Exception("Something gone wrong!")
 
+def usage():
+    usage = """
+    -h --help           USAGE: 'python eval.py -g goldFile -s systemOutput' OR 'python eval.py -c clusterRoot'
+    -g --goldlog        path/to/goldstandard/file
+    -s --syslog         path/to/system/output/file
+    -c --cluster        path/to/folder/containing/subfolders (use this param alone)
+    """
+    #print "USAGE: 'python eval.py -g goldFile -s systemOutput'"
+    #print "or...\n to make a new gold file using folders as clusters:"
+    #print "-c path/To/Folder/Containing/Subfolders"
+    print usage
 
+def main(argv):
+    if len(argv) > 1:
+        try:
+            opts, args = getopt.getopt(sys.argv[1:], "hg:s:c:", ["help", "goldlog", "outlog", "cluster"])
+        except getopt.GetoptError, err:
+            print str(err)
+            usage()
+            sys.exit(2)
+        gold = None
+        system = None
+        for o, a in opts:
+            if o == "-h":
+                print usage()
+            elif o in ("-g", "--goldlog"):
+                gold = read_gold_simple(a)  # list(list(cluster))
+            elif o in ("-s", "--outlog"):
+                system = read_log_simple(a)  # tuple(list(similar), list(dissimilar))
+            elif o in ("-c", "--cluster"):
+                get_gold(a, a.split(os.sep)[-1]+".log")
+            else:
+                assert False, "Invalid input"
+
+        if gold and system:
+            evaluate(gold, system)
+    else:
+        print usage()
 
 if __name__ == "__main__":
+    main(sys.argv)
     #gold = get_gold("/Users/rodrigpro/Flickr/download_imgs/downloaded")
     #print gold
     #{'/.../thespire/00001': ['1504224139_f47bd48928_2181_11431482@n00.jpg',...],...}
     #system = read_log("log.txt")
     #{'IMG_9726.ppm': [('IMG_9730.ppm', '-1'),...}
-    system = read_log_simple("matchGraphSandPics.log")  # tuple(list(similar), list(dissimilar))
-    gold = read_gold_simple("goldSandPics.txt")  # list(list(cluster))
+    ##system = read_log_simple("matchGraphSandPics.log")  # tuple(list(similar), list(dissimilar))
+    ##gold = read_gold_simple("goldSandPics.txt")  # list(list(cluster))
     #import time
     #t0 = time.clock()
-    evaluate(gold, system)
+    ##evaluate(gold, system)
     #print time.clock() - t0, "seconds process time"
+
