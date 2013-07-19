@@ -17,6 +17,13 @@
 
 void ratio_aux(int2 * trainIdx1, float2 * distance1, const size_t size1);
 
+//Constructor
+ComparatorCVGPU::ComparatorCVGPU()
+{
+	allowedOnGpu = 5000;
+	onGpuCounter = 0;
+}
+
 //Destructor
 ComparatorCVGPU::~ComparatorCVGPU()
 {
@@ -24,6 +31,7 @@ ComparatorCVGPU::~ComparatorCVGPU()
 	for(std::map<int, IMG*>::const_iterator iter = comparePairs.begin(); iter != comparePairs.end(); iter++)
 	{
 		iter->second->descriptors.release();
+		iter->second->h_descriptors.release();
 		delete iter->second;
 	}
 	comparePairs.clear();
@@ -35,19 +43,38 @@ ComparatorCVGPU::~ComparatorCVGPU()
 int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2, int* h_result, int k, bool showMatches, bool drawEpipolar)
 {
 	cv::gpu::SURF_GPU surf;
+
 	for (int i=0; i < k && h_idx1[i] < iHandler->getTotalNr(); i++) {
 		IMG* i1;
 		IMG* i2;
+
 		std::map<int, IMG*>::const_iterator it1 = comparePairs.find(h_idx1[i]);
 		if (it1 == comparePairs.end()) {
-			i1 = uploadImage(h_idx1[i], surf, iHandler);
-			comparePairs.insert(std::make_pair(h_idx1[i], i1));
 
+			if(onGpuCounter >= (allowedOnGpu - 1))
+			{
+				cleanMap(h_idx2[i]);
+			}
+
+			i1 = uploadImage(h_idx1[i], surf, iHandler);
+			onGpuCounter++;
+			comparePairs.insert(std::make_pair(h_idx1[i], i1));
 //						std::cout << "Picture inserted : " << h_idx1[i] << std::endl;
 		}
 		else
 		{
 			i1 = it1->second;
+			if(!i1->gpuFlag)
+			{ //not on gpu, have to (re-)upload
+				//printf("Reuploading i1 [%i]", h_idx1[i]);
+				if(onGpuCounter >= (allowedOnGpu - 1))
+				{
+					cleanMap(h_idx2[i]);
+				}
+				i1->descriptors.upload(i1->h_descriptors);
+				i1->gpuFlag = true;
+				onGpuCounter++;
+			}
 		}
 		std::map<int, IMG*>::const_iterator it2 = comparePairs.find(h_idx2[i]);
 		if (it2 == comparePairs.end()) {
@@ -59,6 +86,13 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		else
 		{
 			i2 = it2->second;
+			if(!i2->gpuFlag)
+			{
+				//printf("Reuploading i2 [%i]\n", h_idx2[i]);
+				i2->descriptors.upload(i2->h_descriptors);
+				i2->gpuFlag = true;
+				onGpuCounter++;
+			}
 		}
 
 		std::vector<cv::DMatch> symMatches;
@@ -77,10 +111,9 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		//std::vector<cv::DMatch> matches;
 		//cv::Mat fundamental = ransacTest(symMatches, i1.h_keypoints, i2.h_keypoints, matches);
 
-
 		float k = (2 * symMatches.size()) / float(i1->descriptors.size().height + i2->descriptors.size().height);
-		//cout << "i1.descriptors.size() " << i1.descriptors.size().height << endl;
-		//cout << "k(I_i, I_j) = " << k << endl;
+//		std::cout << "i1.descriptors.size() " << i1.descriptors.size().height << endl;
+//		std::cout << "k(I_i, I_j) = " << k << std::endl;
 
 		if (k < 0.04)
 		{
@@ -92,7 +125,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		}
 
 		//clear vector
-		symMatches.clear();
+		//symMatches.clear();
 
 
 		if (showMatches)
@@ -138,15 +171,15 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 
 	//try to delete something from map if it grows too large
 	//TODO evaluate if it works well
-	while(comparePairs.size() > 200)
-	{
-		std::map< int, IMG*>::iterator iter = comparePairs.end();
-		iter--;
-		std::cout << " deleting from map " << iter->first << std::endl;
-		iter->second->descriptors.release();
-		delete iter->second;
-		comparePairs.erase(iter);
-	}
+//	while(comparePairs.size() > 500)
+//	{
+//		std::map< int, IMG*>::iterator iter = comparePairs.end();
+//		iter--;
+//		std::cout << " deleting from map " << iter->first << std::endl;
+//		iter->second->descriptors.release();
+//		delete iter->second;
+//		comparePairs.erase(iter);
+//	}
 
 	surf.releaseMemory();
 
@@ -158,18 +191,44 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 	return 1;
 }
 
+void ComparatorCVGPU::cleanMap(int notAllowedI2)
+{
+	printf("++GOING TO CLEAN UP onGPU = %i, allowed = %i!\n", onGpuCounter, allowedOnGpu);
+	int toRelease = allowedOnGpu/10; //TODO how many?
+	for (std::map<int, IMG*>::iterator rmIter = comparePairs.begin();
+			rmIter != comparePairs.end(); rmIter++) {
+		if (rmIter->first != notAllowedI2) {
+			IMG* current = rmIter->second;
+			if (current->gpuFlag) {
+				current->descriptors.download(current->h_descriptors); //download to host descriptor
+				current->descriptors.release();
+				current->gpuFlag = false;
+				onGpuCounter--;
+				toRelease--;
+				if(toRelease == 0)
+					break;
+			}
+		}
+
+	}
+}
+
 IMG* ComparatorCVGPU::uploadImage(const int inputImg, cv::gpu::SURF_GPU& surf, ImageHandler* iHandler) {
 	struct IMG* img = new IMG();
 	img->path = iHandler->getFullImagePath(inputImg);
+//	std::cout << img->path <<std::endl;
 	cv::Mat imgfile = cv::imread( img->path, 0 );
 	img->im_gpu.upload(imgfile);
 	imgfile.release();  // release memory on the CPU
 	surf(img->im_gpu, cv::gpu::GpuMat(), img->keypoints, img->descriptors, false);
 	img->im_gpu.release(); // release memory on the GPU
 	img->keypoints.release();
-	//surf.downloadKeypoints(img->keypoints, img->h_keypoints);
 
-	//std::cout << "descriptor size " << img->descriptors.size() << std::endl;
+	img->gpuFlag = true;
+
+	//surf.downloadDescriptors((img->keypoints, img->h_keypoints);
+
+//	std::cout << "descriptor size " << img->descriptors.size() << std::endl;
 	return img;
 }
 void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu, 
