@@ -10,11 +10,11 @@
 
 #include "ImageComparator.h"
 #include <opencv2/core/core.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/nonfree/features2d.hpp> //This is where actual SURF and SIFT algorithm is located
+//#include <opencv2/features2d/features2d.hpp>
+//#include <opencv2/nonfree/features2d.hpp> //This is where actual SURF and SIFT algorithm is located
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/calib3d/calib3d.hpp> // for homography
-#include <opencv2/imgproc/imgproc.hpp>
+//#include <opencv2/calib3d/calib3d.hpp> // for homography
+//#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/nonfree/gpu.hpp>
 #include <vector>
@@ -38,7 +38,7 @@ private:
 	std::map<int, IMG*> comparePairs;
 	int onGpuCounter;
 	int allowedOnGpu;
-	cv::gpu::DeviceInfo defInfo;
+	cv::gpu::DeviceInfo devInfo;
 	double totalMem;
 
 public:
@@ -59,7 +59,7 @@ public:
 
 	struct IMG* uploadImage(const int img, cv::gpu::SURF_GPU& surf, ImageHandler* iHandler);
 
-	void cleanMap(int notAllowedI2=NULL, const int proportion=10);
+	void cleanMap(const float proportion);
 	void showPair(IMG& img1, IMG& img2, std::vector<cv::DMatch>& symMatches);
 	double getMemoryLoad();
 };
