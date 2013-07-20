@@ -8,13 +8,13 @@ def read_log_simple(logFile):
     similar = []
     dissimilar = []
     for line in f:
-        if line[0].isalnum():
-            l = line.split()
-            filesPart = ":".join(l[0:2])  # tab space
-            if l[2] == "-1":
-                dissimilar.append(filesPart)
+        if line[0].strip().isalnum():
+            l = line.split("\t")
+            filesPart = "".join(l[0:2]).strip()  # tab space
+            if l[2].strip() == "-1":
+                dissimilar.append(filesPart.lower())
             else:
-                similar.append(filesPart)
+                similar.append(filesPart.lower())
         else:
             print line
     return similar, dissimilar
@@ -23,13 +23,14 @@ def read_gold_simple(goldFile):
     f = open(goldFile)
     clusters = []
     for line in f:
-        if line.startswith("/"):
+        if not line.strip()[0].isalnum():
             clusters.append([])  # new cluster
             #continue
         else:
-            l = line.split()
-            filesPart = ":".join(l[0:2])  # tab space
-            clusters[-1].append(filesPart)
+            l = line.split("\t")
+            filesPart = "".join(l[0:2]).strip()  # tab space
+            clusters[-1].append(filesPart.lower())
+    print len(clusters)
     return clusters
 
 
@@ -85,14 +86,14 @@ def evaluate(gold, system):
         for cluster in gold:
             if s in cluster:
                 tp += 1
-                break  # once we found s in some cluster, we don't check other clusters
+                #break  # once we found s in some cluster, we don't check other clusters
 
     # false negative, in cluster but system got -1
     for d in dissimilar:
         for cluster in gold:
             if d in cluster:
                 fn += 1
-                break
+                #break
 
     # true negative, not in cluster and system got -1
     tn = len(dissimilar) - fn
@@ -100,12 +101,12 @@ def evaluate(gold, system):
     # false positive, not in cluster but system got 1
     fp = len(similar) - tp
 
-    print "True Positives =", tp/2
-    print "False Negatives =", fn/2
-    print "True Negatives =", tn/2
-    print "False Positives =", fp/2
+    print "True Positives =", tp
+    print "False Negatives =", fn
+    print "True Negatives =", tn
+    print "False Positives =", fp
     print "----------------------"
-    print "Total compared =", (len(similar) + len(dissimilar))/2
+    print "Total compared =", (len(similar) + len(dissimilar))/2.
     print "----------------------"
 
     print "Precision = %0.2f" %(tp/(tp+fp*1.0))
