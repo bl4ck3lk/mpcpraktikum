@@ -22,7 +22,7 @@ ComparatorCVGPU::ComparatorCVGPU()
 	allowedOnGpu = 1000;
 	onGpuCounter = 0;
 	cv::gpu::DeviceInfo defInfo(0);
-	double totalMem = (double) defInfo.totalMemory();
+	totalMem = (double) defInfo.totalMemory();
 }
 
 //Destructor
@@ -41,11 +41,11 @@ ComparatorCVGPU::~ComparatorCVGPU()
 
 int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2, int* h_result, int k, bool showMatches)
 {
-	if (getMemoryLoad() > 0.8f && onGpuCounter > 0)
-	{
-		printf("Begin of function. 80%%\n");
-		cleanMap(NULL, 1);
-	}
+//	if (getMemoryLoad() > 0.8f && onGpuCounter > 0)
+//	{
+//		printf("Begin of function. 80%%\n");
+//		cleanMap(NULL, 1);
+//	}
 
 	cv::gpu::SURF_GPU surf;
 
@@ -55,7 +55,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		if (getMemoryLoad() > 0.8f && onGpuCounter > 0)
 		{
 			printf("Begin of iteration. 80%%\n");
-			cleanMap(NULL, 1);
+			cleanMap(-1, 1);
 		}
 		std::map<int, IMG*>::const_iterator it1 = comparePairs.find(h_idx1[i]);
 		if (it1 == comparePairs.end()) {
@@ -139,7 +139,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		if (getMemoryLoad() > 0.8f && onGpuCounter > 0)
 		{
 			printf("End of iteration. 80%%\n");
-			cleanMap(NULL, 1);
+			cleanMap(-1, 1);
 		}
 	}
 
@@ -149,12 +149,10 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 
 double ComparatorCVGPU::getMemoryLoad()
 {
-	double free = (double) defInfo.freeMemory();
-	//printf("Free memory %.3f MB\n", free/1024/1024);
-	//printf("Total memory %.3f MB\n", total/1024/1024);
-	double percUsed = (totalMem-free)/totalMem;
-	//printf("Percentage of used memory %.2f\n", percUsed);
-	return percUsed;
+	const double free = (double) defInfo.freeMemory();
+	printf("Free memory %.3f MB (of total %.3f)\n", free/1024/1024, totalMem/1024/1024);
+
+	return (totalMem-free)/totalMem;
 }
 void ComparatorCVGPU::cleanMap(int notAllowedI2, const int proportion)
 {
