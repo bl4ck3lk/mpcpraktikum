@@ -149,6 +149,7 @@ void ComparatorCVGPU::cleanMap(const float proportion)
 	}
 }
 
+//TODO: doesn"t work if keypoints are released
 void ComparatorCVGPU::showPair(IMG& img1, IMG& img2, std::vector<cv::DMatch>& symMatches, cv::gpu::SURF_GPU& surf)
 {
 	surf.downloadKeypoints(img1.keypoints, img1.h_keypoints);
@@ -199,7 +200,7 @@ IMG* ComparatorCVGPU::uploadImage(const int inputImg, cv::gpu::SURF_GPU& surf, I
 		return NULL;
 	}
 	img->im_gpu.release(); // release memory on the GPU
-	//img->keypoints.release();
+	img->keypoints.release(); //TODO: don't release if in showMatches modus
 
 	img->gpuFlag = true;
 
