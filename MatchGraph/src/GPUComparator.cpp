@@ -72,12 +72,11 @@ void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 		h_res = Helper::downloadGPUArrayInt(d_res, arraySize);
 
 		__int64_t startTime = continuousTimeNs();
-		openCVcomp->compareGPU(iHandler, h_idx1, h_idx2, h_res, arraySize, false);
+		openCVcomp->compareGPU(iHandler, h_idx1, h_idx2, h_res, arraySize);
 		__int64_t timeNeeded = continuousTimeNs()-startTime;
 		totalTime += timeNeeded;
 		//printf("Compared %i images with OpenCV_GPU. Time: %f\n", arraySize,timeNeeded*(1/(double)1000000000));
 		printf("%f\n", timeNeeded*(1/(double)1000000000));
-		
 		//upload Result
 		Helper::cudaMemcpyArrayInt(h_res, d_res, arraySize);
 	}

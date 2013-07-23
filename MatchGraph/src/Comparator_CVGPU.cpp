@@ -91,7 +91,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 			//		std::cout << "i1.descriptors.size() " << i1.descriptors.size().height << endl;
 			//			std::cout << "k(I_i, I_j) = " << k << std::endl;
 
-			if (k < 0.04)
+			if (k < 0.025)
 			{
 				h_result[i] = 0;
 			}
@@ -102,7 +102,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 
 			if (showMatches)
 			{
-				showPair(*i1, *i2, symMatches);
+				showPair(*i1, *i2, symMatches, surf);
 
 			}
 		} catch (cv::Exception& e) {
@@ -149,12 +149,12 @@ void ComparatorCVGPU::cleanMap(const float proportion)
 	}
 }
 
-//TODO: doesn't work yet!
-void ComparatorCVGPU::showPair(IMG& img1, IMG& img2, std::vector<cv::DMatch>& symMatches)
+//TODO: doesn"t work if keypoints are released
+void ComparatorCVGPU::showPair(IMG& img1, IMG& img2, std::vector<cv::DMatch>& symMatches, cv::gpu::SURF_GPU& surf)
 {
-	//	surf.downloadKeypoints(img1.keypoints, img1.h_keypoints);
-	// Convert keypoints into Point2f
-	std::vector<cv::Point2f> points1, points2;
+	surf.downloadKeypoints(img1.keypoints, img1.h_keypoints);
+	surf.downloadKeypoints(img2.keypoints, img2.h_keypoints);
+
 	cv::Mat im1 = cv::imread( img1.path, 0 );
 	cv::Mat im2 = cv::imread( img2.path, 0 );
 
@@ -164,29 +164,21 @@ void ComparatorCVGPU::showPair(IMG& img1, IMG& img2, std::vector<cv::DMatch>& sy
 	//resize(im1, im1, size1);
 	//resize(im2, im2, size2);
 
-	for (std::vector<cv::DMatch>::const_iterator it = symMatches.begin();
-			it != symMatches.end(); ++it) {
-
-		// Get the position of left keypoints
-		float x = img1.h_keypoints[it->queryIdx].pt.x;
-		float y = img2.h_keypoints[it->queryIdx].pt.y;
-		points1.push_back(cv::Point2f(x,y));
-		cv::circle(im1,cv::Point(x,y),3,cv::Scalar(255,0,0),2);
-		// Get the position of right keypoints
-		x = img2.h_keypoints[it->trainIdx].pt.x;
-		y = img2.h_keypoints[it->trainIdx].pt.y;
-		cv::circle(im2,cv::Point(x,y),3,cv::Scalar(255,0,0),2);
-		points2.push_back(cv::Point2f(x,y));
-	}
-
 	cv::Mat img_matches;
-	//cv::drawMatches(im1, im1_keypoints, im2, im2_keypoints, matches, img_matches);
-	//cv::imshow("Matches", img_matches);
+	cv::drawMatches(im1, img1.h_keypoints, im2, img2.h_keypoints, symMatches, img_matches,
+			cv::Scalar::all(-1), cv::Scalar::all(-1),
+			std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 
-	cv::imshow("Image 1", im1);
-	cv::imshow("Image 2", im2);
-
+	cv::imshow("Matches", img_matches);
 	cv::waitKey();
+
+	//TODO: path to save
+//	if (write)
+//	{
+//		std::string id1str = static_cast<std::ostringstream*>( &(std::ostringstream() << id1) )->str();
+//		std::string id2str = static_cast<std::ostringstream*>( &(std::ostringstream() << id2) )->str();
+//		cv::imwrite(id1str+"_"+id2str+".jpg", img_matches);
+//	}
 }
 
 IMG* ComparatorCVGPU::uploadImage(const int inputImg, cv::gpu::SURF_GPU& surf, ImageHandler* iHandler) {
@@ -208,7 +200,7 @@ IMG* ComparatorCVGPU::uploadImage(const int inputImg, cv::gpu::SURF_GPU& surf, I
 		return NULL;
 	}
 	img->im_gpu.release(); // release memory on the GPU
-	img->keypoints.release();
+	img->keypoints.release(); //TODO: don't release if in showMatches modus
 
 	img->gpuFlag = true;
 
