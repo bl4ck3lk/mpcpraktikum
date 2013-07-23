@@ -30,6 +30,8 @@ private:
 	void initArrays(int arraySize);
 
 	bool randomMode;
+
+	__int64_t totalTime;
 };
 
 #endif /* GPUCOMPARATOR_H_ */

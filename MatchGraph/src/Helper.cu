@@ -10,7 +10,7 @@
 #include <iostream>
 #include <stdio.h>
 
-#define CHECK_FOR_CUDA_ERROR 1
+#define CHECK_FOR_CUDA_ERROR 0
 
 #define CUDA_CHECK_ERROR() {							\
 cudaError_t err = cudaGetLastError();					\

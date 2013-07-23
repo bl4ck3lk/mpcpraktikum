@@ -27,12 +27,26 @@
 
 #define GPU_VERSION 1
 
+inline __int64_t continuousTimeNs()
+ {
+         timespec now;
+         clock_gettime(CLOCK_REALTIME, &now);
+
+         __int64_t result = (__int64_t ) now.tv_sec * 1000000000
+                         + (__int64_t ) now.tv_nsec;
+
+         return result;
+ }
+
 int main(int argc, char** argv)
 {
 	srand((unsigned int)time(NULL));
 
+//	generateGold();
+//	return 1;
+
 	char* usageBuff = new char[1024];
-	strcpy(usageBuff, "Usage: <path> <ext> <iter> [<k>] [<lambda>]\n"
+	strcpy(usageBuff, "Usage: <path> <ext> <iter> [<k>] [<lambda>] [<logDir>]\n"
 			"       Starts algorithm for <iter> iterations on images in directory <path> with specified file\n"
 			"       extension <ext>. Parameter <k> [1,#numImages] defines how many images shall be compared each\n"
 			"       iteration (k-best). Model parameter lambda [0,1] (default = 1) influences the computation of\n"
@@ -58,6 +72,8 @@ int main(int argc, char** argv)
 	int _iter = 1;
 	int _k = 1;
 	float _lambda = 1.0;
+	const char* logFilePath = "log/matchGraph.log";
+
 
 	if (strcmp(dir, "-r") == 0)
 	{
@@ -117,6 +133,11 @@ int main(int argc, char** argv)
 		{
 			_lambda = atof(argv[acount++]);
 		}
+		
+		if (argc > 6) //optional param log file path
+		{
+		  logFilePath = argv[acount++];
+		}
 
 	}
 	if (_iter < 1)
@@ -146,9 +167,6 @@ int main(int argc, char** argv)
 	Initializer* init;
 	ImageComparator* comparator;
 
-	if (!randomMode)
-		printf("Directory %s with %i files initialized.\n", dir, iHandler->getTotalNr());
-
 	//////////////////
 	//Final Settings//
 	//////////////////
@@ -156,7 +174,10 @@ int main(int argc, char** argv)
 	const int iterations = _iter;
 	const float lambda = _lambda;
 	const int kBest = _k;
-	const int sizeOfInitIndicesList = kBest; //TODO make this dependent from dim (exponential)?
+	const int sizeOfInitIndicesList = kBest;
+	
+	if (!randomMode)
+		printf("#Directory \t%s\n#Images\t%i\n#k\t%i\n", dir, iHandler->getTotalNr(), kBest);
 
 	////////////////////////////////////
 	// Initialize computation handler //
@@ -179,6 +200,9 @@ int main(int argc, char** argv)
 
 	comparator->setRandomMode(randomMode);
 
+	printf("#i\tsolver\terror\tcomparator\n");
+	__int64_t startTime = continuousTimeNs();
+	
 	/////////////////////////////////////////////////////////
 	//Match Graph algorithm (predict & verify step-by-step)//
 	/////////////////////////////////////////////////////////
@@ -197,13 +221,17 @@ int main(int argc, char** argv)
 		/////////////////////////
 		//Iterative progression//
 		/////////////////////////
-		printf("************** Iteration %i **************\n", i);
-
+		//printf("************** Iteration %i **************\n", i);
+		printf("%i\t", i);
+		
 #if GPU_VERSION
 		//get the next images that should be compared (implicitly solving eq. system => confidence measure matrix)
-//		if(i < 0)
-//			CME->computeRandomComparisons(T, kBest);
-		CME->getKBestConfMeasures(T, NULL, kBest);
+
+		if(i % 10 == 0) //every 10th step a random step //TODO shall first iter be random? is not bad as it is like 
+								//a double initialization -> more start information
+			CME->computeRandomComparisons(T, kBest); 
+		else
+			CME->getKBestConfMeasures(T, NULL, kBest);
 		//compare images which are located in the device arrays of CME
 		comparator->doComparison(iHandler, T, CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest); //device pointer
 		//update matrix with new information (compared images)
@@ -218,8 +246,13 @@ int main(int argc, char** argv)
 		T_cpu->set(CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest);//host pointer
 #endif
 	}
+	__int64_t endTime = continuousTimeNs();
+	__int64_t diff = endTime - startTime;
 
-	T_sparse->logSimilarToFile("log/matchGraph.log", iHandler);
+	printf("TOTAL RUNTIME:%f\n", diff*(1/(double)1000000000));
+
+	if(!randomMode)
+		T_sparse->logSimilarToFile(logFilePath, iHandler);
 
 	//cleanup
 #if GPU_VERSION
@@ -231,6 +264,9 @@ int main(int argc, char** argv)
 	delete[] usageBuff;
 	delete CME;
 	delete comparator;
+
+
+	cudaDeviceReset();
 
 	exit(EXIT_SUCCESS);
 }

@@ -25,6 +25,7 @@ public:
 	void computeRandomComparisons(MatrixHandler* T, const int k);
 
 private:
+	__int64_t totalTime;
 	int lastSize;
 
 	int* d_idx1;

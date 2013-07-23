@@ -29,6 +29,8 @@
 #include "Tester.h"
 #include "Helper.h"
 
+#define CHECK_FOR_CUDA_ERROR 0
+
 #define CUDA_CHECK_ERROR() {							\
     cudaError_t err = cudaGetLastError();					\
     if (cudaSuccess != err) {						\
@@ -38,6 +40,16 @@
     }									\
 }
 
+inline __int64_t continuousTimeNs()
+ {
+         timespec now;
+         clock_gettime(CLOCK_REALTIME, &now);
+
+         __int64_t result = (__int64_t ) now.tv_sec * 1000000000
+                         + (__int64_t ) now.tv_nsec;
+
+         return result;
+ }
 
 const int THREADS = 128;
 
@@ -109,8 +121,10 @@ CMEstimatorGPUSparse::CMEstimatorGPUSparse() {
 	d_idx2 = NULL;
 	d_res = NULL;
 
+	totalTime = 0;
+
 	/* cula initialization */
-	initCula();
+	//initCula();
 }
 
 
@@ -119,6 +133,7 @@ CMEstimatorGPUSparse::~CMEstimatorGPUSparse() {
 	if (d_idx1 != NULL) cudaFree(d_idx1);
 	if (d_idx2 != NULL) cudaFree(d_idx2);
 	if (d_res != NULL) cudaFree(d_res);
+	printf("Total solver time: %f\n", totalTime*(1/(double)1000000000));
 }
 
 int* CMEstimatorGPUSparse::getIdx1Ptr()
@@ -169,7 +184,7 @@ void CMEstimatorGPUSparse::initIdxDevicePointers(int size, unsigned int dim)
 	int numBlocks = (size + THREADS - 1) / THREADS;
 	initIndexArrays<<<numBlocks, THREADS>>>(d_idx1, d_idx2, d_res, size, dim);
 
-	printf("[ESTIMATOR]: Device index arrays with size %i allocated.\n",size);
+//	printf("[ESTIMATOR]: Device index arrays with size %i allocated.\n",size);
 }
 
 /*
@@ -196,7 +211,9 @@ int CMEstimatorGPUSparse::determineBestConfMeasures(double* xColumnDevice, doubl
 	 * assigned a very low value to prevent them from getting chosen later.
 	 */
 	initKernel<<<numBlocks, numThreads>>>(gpuIndices, xColumnDevice, bColumnDevice, dim, columnIdx);
-	CUDA_CHECK_ERROR();
+#if CHECK_FOR_CUDA_ERROR
+	CUDA_CHECK_ERROR()
+#endif
 
 	//wrap column device pointer
 	thrust::device_ptr<double> dp_xColumn = thrust::device_pointer_cast(xColumnDevice);
@@ -204,7 +221,6 @@ int CMEstimatorGPUSparse::determineBestConfMeasures(double* xColumnDevice, doubl
 	//sort x column and index array respectively
 	//already known values will be the last ones due to initialization
 	thrust::sort_by_key(dp_xColumn, dp_xColumn + dim, dp_gpuIndices, thrust::greater<double>());
-	CUDA_CHECK_ERROR();
 
 //	Helper::printGpuArrayD(xColumnDevice, 10, "Top10");
 
@@ -220,7 +236,9 @@ int CMEstimatorGPUSparse::determineBestConfMeasures(double* xColumnDevice, doubl
 
 //	printf("notWritten = %i\n", notWritten);
 
-	CUDA_CHECK_ERROR();
+#if CHECK_FOR_CUDA_ERROR
+	CUDA_CHECK_ERROR()
+#endif
 
 	//free memory
 	cudaFree(gpuIndices);
@@ -230,7 +248,7 @@ int CMEstimatorGPUSparse::determineBestConfMeasures(double* xColumnDevice, doubl
 
 void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
 {
-	printf("[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).\n");
+//	printf("[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).\n");
 
 	//invoked only on sparse MatrixHandler
 	GPUSparse* T_sparse = dynamic_cast<GPUSparse*> (T);
@@ -296,7 +314,7 @@ void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int 
 	char* colsVisited = (char*)malloc(sizeof(char)*dim);
 	memset(colsVisited, 0, dim);
 	//printf("[CMESTIMATOR]: Solve Eq. system column by column.\n");
-	int start_s_CULA = clock();
+	__int64_t startCula = continuousTimeNs();
 	for(int i = 0; i < (dim) && countIndices < kBest; i++) //if enough values are gathered, stop computation
 	{
 		//0. determine number of best values for this column
@@ -359,20 +377,22 @@ void CMEstimatorGPUSparse::getKBestConfMeasures(MatrixHandler* T, float* F, int 
 
 //		printf("Column %i, try to determine %i best values. Actually determined by now %i values\n", i, determineXforThisColumn, countIndices);
 	}
-
+	__int64_t solverDiff = continuousTimeNs()-startCula;
+	totalTime += solverDiff;
+	//printf("Solver time [%i of %i NO ERROR]: %f\n", noError, solverTrials, solverDiff*(1/(double)1000000000));
+	printf("%f\t%i\t", solverDiff*(1/(double)1000000000), (solverTrials-noError));
 	free(colsVisited);
 
-	int stop_s_CULA=clock();
-	std::cout << "time Solving: " << (stop_s_CULA-start_s_CULA)/double(CLOCKS_PER_SEC)*1000 << std::endl;
-
-	printf("After solving [%i of %i NO ERROR]! Going to sort with thrust\n", noError, solverTrials);
+	//printf("After solving [%i of %i NO ERROR]! Going to sort with thrust\n", noError, solverTrials);
 	//sort first index array and second index array respectively
 	//wrap device pointers
 	thrust::device_ptr<int> dp_idx1 = thrust::device_pointer_cast(d_idx1);
 	thrust::device_ptr<int> dp_idx2 = thrust::device_pointer_cast(d_idx2);
 
 	thrust::sort_by_key(dp_idx1, dp_idx1 + kBest, dp_idx2); //sort ascending
+#if CHECK_FOR_CUDA_ERROR
 	CUDA_CHECK_ERROR()
+#endif
 
 	//clean up the mess
 	cudaFree(d_x);
@@ -394,7 +414,9 @@ culaSparseStatus CMEstimatorGPUSparse::computeConfidenceMeasure(culaSparseHandle
 	// execute plan
 	culaSparseStatus status = culaSparseExecutePlan(handle, plan, &config, &result);
 
-	CUDA_CHECK_ERROR();
+#if CHECK_FOR_CUDA_ERROR
+	CUDA_CHECK_ERROR()
+#endif
 
 	//print if error
 	if (culaSparseNoError != status)
@@ -411,7 +433,13 @@ culaSparseStatus CMEstimatorGPUSparse::computeConfidenceMeasure(culaSparseHandle
 
 void CMEstimatorGPUSparse::computeRandomComparisons(MatrixHandler* T, const int k)
 {
+	printf("0\t0\t");
 	GPUSparse* matrix = dynamic_cast<GPUSparse*>(T);
+	if (k != lastSize)
+	{
+		initIdxDevicePointers(k, matrix->getDimension());
+		lastSize = k;
+	}
 	matrix->fillRandomCompareIndices(d_idx1, d_idx2, d_res, k);
 }
 

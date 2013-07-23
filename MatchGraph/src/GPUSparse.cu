@@ -15,13 +15,7 @@
 #include <fstream>
 #include <curand_kernel.h>
 
-#define CUDA_SAFE_CALL(err) {							\
-if (cudaSuccess != err)	{						\
-    fprintf (stderr, "Cuda error in file '%s' in line %i : %s.",	\
-            __FILE__, __LINE__, cudaGetErrorString(err) );	\
-    exit(EXIT_FAILURE);						\
-}									\
-}
+#define CHECK_FOR_CUDA_ERROR 0
 
 #define CUDA_CHECK_ERROR() {							\
 cudaError_t err = cudaGetLastError();					\
@@ -238,7 +232,9 @@ __global__ void setupCurandkernel(curandState *state)
 }
 
 
-__global__ void randomComparisonFillKernel(float* test, int* idx1, int* idx2, int* rowPtr,
+//kernel for randomly filling index arrays with not yet compared images
+//TODO can for sure be implemented in a much more elegant way ;)
+__global__ void randomComparisonFillKernel(int* idx1, int* idx2, int* rowPtr,
 							int* colIdx, const int k, const int dim, curandState* state)
 {
 	int tIdx = threadIdx.x + blockDim.x * blockIdx.x;
@@ -250,28 +246,72 @@ __global__ void randomComparisonFillKernel(float* test, int* idx1, int* idx2, in
 		const int myLowLimit = tIdx * rangeSize; //rand must be >= this limit
 		const int myUpperLimit = myLowLimit + rangeSize - 1; //rand must be < this limit
 
+
+		curandState localState = state[tIdx];
 		if(myLowLimit == myUpperLimit)
 		{
 			myRandomRow = myLowLimit;
 		}
 		else
 		{
-			curandState localState = state[tIdx];
 			float uniRand = curand_uniform(&localState);
 			state[tIdx] = localState; //back to global
 
 			myRandomRow = myLowLimit + (uniRand * (myUpperLimit - myLowLimit)) - 1; // should be in [low,up)
-			test[tIdx] = uniRand;
 		}
 
 		idx1[tIdx] = myRandomRow;
 
+		int currentlyFound = dim+1;
+		int last = -1;
+		const int minElem = myRandomRow+1; //only lower diagonal matrix allowed
 		for(int j = rowPtr[myRandomRow]; j < rowPtr[myRandomRow+1]; j++)
 		{
+			if(colIdx[j] != last+1)
+			{
+				//an empty spot found
 
-			//TODO
+				//check if not diagonal element (i,i) and >= min
+				if(last+1 != myRandomRow && last+1 >= minElem){
+					currentlyFound = last+1;
+				}
+
+			}
+			last = colIdx[j];
 		}
+		
+		//with high probability run on... at larger elments
+		if(((curand_uniform(&localState) < .80) && (last < dim-1)) || ((last < dim-1) && currentlyFound==dim+1))
+		{
+		float diff = dim - minElem;
+		float breakProb = 1/ diff;
+			for(int j = last; j < dim; j++)
+			{
+				if(j != myRandomRow && j >= minElem)
+				{
+					currentlyFound = j;
+					if(curand_uniform(&localState) < breakProb)
+					  break;
+					breakProb += 1/diff;
+				}
+			}
+		}
+		idx2[tIdx] = currentlyFound;
+	}
+}
 
+//just checks if no values > dim+1 or < 0 are in given array
+__global__ void checkRandoms(int* idx1, const int k, const int dim, int* errors)
+{
+	int tIdx = threadIdx.x + blockDim.x * blockIdx.x;
+
+	if(tIdx < k)
+	{
+		if(idx1[tIdx] > dim+1 || idx1[tIdx] < 0)
+		{
+			idx1[tIdx] = dim+1;
+			atomicAdd(&errors[0], 1);
+		}
 	}
 }
 
@@ -322,7 +362,7 @@ void GPUSparse::handleDissimilar(int* idxData, int num)
 
 void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 {
-	bool verbose = false;
+	const bool verbose = false;
 
 	//this conversion is done just for testing convenience
 	int* idx1 = _idx1;
@@ -332,11 +372,6 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 
 	//get number of non-zero elements before update
 	const int nnzBeforeUpdate = getNNZ();
-
-	//TODO remove this
-//	int* originalRowPtr;
-//	cudaMalloc((void**) &originalRowPtr, (dim + 1) * sizeof(int));
-//	cudaMemcpy(originalRowPtr, _gpuRowPtr, (dim + 1) * sizeof(int), cudaMemcpyDeviceToDevice);
 
 	if (verbose)
 	{
@@ -358,7 +393,9 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	thrust::device_ptr<int> dev_ptr_prefix = thrust::device_pointer_cast(res);
 	thrust::exclusive_scan(dev_ptr_prefix, dev_ptr_prefix + k, dev_ptr_prefix_res);
 	
+#if CHECK_FOR_CUDA_ERROR
 	CUDA_CHECK_ERROR()
+#endif	
 	
 	//TODO move numSimilar computation to GPU, directly in kernel with argument?
 	int numSimilar;
@@ -377,8 +414,6 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	cudaMalloc((void**) &negativeIndx, (2*(k - numSimilar))*sizeof(int));
 	int* cleanedIdx1 = cleanedIdx;
 	int* cleanedIdx2 = cleanedIdx + numSimilar;
-
-	CUDA_CHECK_ERROR()
 	
 	numThreads = 32;
 	numBlocks = 1 + (k / numThreads);
@@ -399,7 +434,6 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 
 	cudaMalloc((void**) &rowData, 4 * (dim + 1) * sizeof(int));
 	initKernel<<<512, 256>>>(rowData, 0, 4 * (dim + 1));
-	CUDA_CHECK_ERROR()
 
 	int* rowIncrIdx1 = rowData;
 	int* rowIncrIdx2 = rowData + (dim + 1);
@@ -412,57 +446,54 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 	numThreads = 32;
 	numBlocks = 1 + (k / numThreads);
 	rowIncrementedKernel<<<numBlocks, numThreads>>>(rowData, cleanedIdx1, cleanedIdx2, (dim + 1), k);
-	CUDA_CHECK_ERROR()
 
 	numThreads = 256;
 	numBlocks = 1 + ((dim+1)/numThreads);
 	arrayAddKernel<<<numBlocks, numThreads>>>(rowIncr, rowIncrIdx1, rowIncrIdx2, (dim + 1));
-	CUDA_CHECK_ERROR()
 
 	dev_ptr_prefix = thrust::device_pointer_cast(rowIncr);
 	dev_ptr_prefix_res = thrust::device_pointer_cast(prefixRowIncr);
 	thrust::inclusive_scan(dev_ptr_prefix, dev_ptr_prefix + (dim + 1), dev_ptr_prefix_res);
 
+#if CHECK_FOR_CUDA_ERROR
+	CUDA_CHECK_ERROR()
+#endif
 
 	numThreads = 128;
 	numBlocks = 1 + (dim / numThreads);
 	updateDegreeKernel<<<numBlocks, numThreads>>>(_gpuDegrees, rowIncr, dim);
 	numBlocks = 1 + (k / numThreads);
 	updateDiagPosKernel<<<numBlocks, numThreads>>>(_gpuDiagPos, cleanedIdx1, cleanedIdx2, k);
-	CUDA_CHECK_ERROR()
 
 	int* newColIdx;
 	const int sizeNewColIdx = (getNNZ() + numSimilar * 2);
 	cudaMalloc((void**) &newColIdx, sizeNewColIdx * sizeof(int));
 
 	initKernel<<<512, 256>>>(newColIdx, dim + 1, sizeNewColIdx);
-	CUDA_CHECK_ERROR()
 
 	numThreads = 128;
 	numBlocks = dim;
 	int gridDim = 1 + sqrt(dim);
 	dim3 blockGrid(gridDim,gridDim);
 	colIdxIncrementKernel<<<blockGrid, numThreads>>>(newColIdx, _gpuColIdx, _gpuRowPtr, prefixRowIncr, dim);
-	CUDA_CHECK_ERROR()
 
 
 	numThreads = 256;
 	numBlocks = 1 + ((dim+1)/numThreads);
 	arrayAddKernel<<<numBlocks, numThreads>>>(prefixRowIncr, prefixRowIncr, _gpuRowPtr, (dim + 1));
-	CUDA_CHECK_ERROR()
 	
 
 	dev_ptr_prefix = thrust::device_pointer_cast(rowIncrIdx1);
 	dev_ptr_prefix_res = thrust::device_pointer_cast(prefixIndex1);
 	thrust::inclusive_scan(dev_ptr_prefix, dev_ptr_prefix + (dim + 1), dev_ptr_prefix_res);
-	CUDA_CHECK_ERROR()
 	
 	numThreads = 32;
 	numBlocks = 1 + (dim / numThreads);
 	doInsertionKernel<<<numBlocks, numThreads>>>(newColIdx, prefixRowIncr, _gpuRowPtr, cleanedIdx2, prefixIndex1, dim);
 
-
+#if CHECK_FOR_CUDA_ERROR
 	CUDA_CHECK_ERROR()
+#endif
 
 	//resorting such that sorted after idx2 array
 	thrust::device_ptr<int> dpIdx1 = thrust::device_pointer_cast(cleanedIdx1);
@@ -476,8 +507,6 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 
 	//insertion sort of new elements on column index
 	doInsertionKernel<<<numBlocks, numThreads>>>(newColIdx, prefixRowIncr, _gpuRowPtr, cleanedIdx1, prefixIndex1, dim);
-
-	CUDA_CHECK_ERROR()
 
 	num_similar += numSimilar;
 
@@ -494,8 +523,6 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 
 	cudaFree(rowData);
 	cudaFree(cleanedIdx);
-	//cudaFree(prefixSumResult);
-	//cudaFree(negativeIndx);
 	
 	free(negativeIdxHost);
 
@@ -512,7 +539,9 @@ void GPUSparse::updateSparseStatus(int* _idx1, int* _idx2, int* _res, int _k)
 		/**********************************/
 	}
 
+#if CHECK_FOR_CUDA_ERROR
 	CUDA_CHECK_ERROR()
+#endif
 }
 
 void GPUSparse::set(int i, int j, bool val)
@@ -654,8 +683,8 @@ void GPUSparse::print()
 {
 	printf("###INFO about SPARSE MATRIX###\n");
 	printf("dim = %i, lambda = %f, nnz = %i \n", dim, lambda, getNNZ());
-	//Helper::printGpuArray(_gpuColIdx, getNNZ(), "colIdx (on GPU)");
-	//Helper::printGpuArray(_gpuRowPtr, dim+1, "rowPtr (on GPU)");
+//	Helper::printGpuArray(_gpuColIdx, getNNZ(), "colIdx (on GPU)");
+//	Helper::printGpuArray(_gpuRowPtr, dim+1, "rowPtr (on GPU)");
 }
 
 void GPUSparse::writeGML(char * filename, bool similar, bool dissimilar,
@@ -679,8 +708,13 @@ unsigned int GPUSparse::getNNZ() const
 	return num_similar * 2 + dim;
 }
 
+
+//TODO not complete yet.
 void GPUSparse::fillRandomCompareIndices(int* idx1, int* idx2, int* res, const int k) const
 {
+//	Helper::printGpuArray(_gpuColIdx, getNNZ(), "colIdx (on GPU)");
+//	Helper::printGpuArray(_gpuRowPtr, dim+1, "rowPtr (on GPU)");
+
 	initKernel<<<256, 256>>>(res, 0, k); //TODO necessary to initialize res ?
 
 	initKernel<<<256, 256>>>(idx1, dim+1, k);
@@ -688,7 +722,6 @@ void GPUSparse::fillRandomCompareIndices(int* idx1, int* idx2, int* res, const i
 	initKernel<<<256, 256>>>(idx2, dim+1, k);
 
 	cudaDeviceSynchronize();
-	CUDA_CHECK_ERROR()
 
 	const int numThreads = 256;
 	const int numBlocks = 1 + (numThreads/k);
@@ -697,15 +730,68 @@ void GPUSparse::fillRandomCompareIndices(int* idx1, int* idx2, int* res, const i
 
 	cudaMalloc((void **)&devStates, numThreads * numBlocks *  sizeof(curandState));
 
-	float* test;
-	cudaMalloc((void**) &test, sizeof(float)*k);
+	randomComparisonFillKernel<<<numBlocks, numThreads>>>(idx1, idx2, _gpuRowPtr, _gpuColIdx, k, dim, devStates);
 
-	randomComparisonFillKernel<<<numBlocks, numThreads>>>(test, idx1, idx2, _gpuRowPtr, _gpuColIdx, k, dim, devStates);
+#if CHECK_FOR_CUDA_ERROR
 	CUDA_CHECK_ERROR()
+#endif
 
-	Helper::printGpuArray(idx1, k, "i:");
-	Helper::printGpuArray(idx2, k, "j:");
-	Helper::printGpuArrayF(test, k, "rand gpu");
+	int* h_idx1 = Helper::downloadGPUArrayInt(idx1, k);
+	int* h_idx2 = Helper::downloadGPUArrayInt(idx2, k);
+	
+	for(int i = 0; i < k; i++)
+	{
+	  myElemMap::const_iterator it = dissimilarMap.find(h_idx1[i]);
+	  if (it != dissimilarMap.end())
+	  {
+		if(it->second.find(h_idx2[i]) != it->second.end())
+		{
+		  h_idx1[i] = dim+1;
+		  h_idx2[i] = dim+1;
+		}
+	  }
+	}
+	
+	cudaMemcpy(idx1, h_idx1, k*sizeof(int), cudaMemcpyHostToDevice);
+	
+	cudaMemcpy(idx2, h_idx2, k*sizeof(int), cudaMemcpyHostToDevice);
+	
+	
+	/* ERROR checking
+	int* errors;
+	cudaMalloc((void**) &errors, sizeof(int));
+	cudaMemset(errors, 0, sizeof(int));
+	checkRandoms<<<numBlocks, numThreads>>>(idx1, k, dim, errors);
+	int h_errors;
+	cudaMemcpy(&h_errors, errors, sizeof(int),  cudaMemcpyDeviceToHost);
+	if(h_errors != 0){
+		printf("Error on random fill [idx1]! Aborting...");
+		exit(EXIT_FAILURE);
+	}
+	cudaMemset(errors, 0, sizeof(int));
+	checkRandoms<<<numBlocks, numThreads>>>(idx1, k, dim, errors);
+	cudaMemcpy(&h_errors, errors, sizeof(int),  cudaMemcpyDeviceToHost);
+	if(h_errors != 0){
+		printf("Error on random fill [idx2]! Aborting...");
+		exit(EXIT_FAILURE);
+	}
+	*/
+
+	thrust::device_ptr<int> dpIdx1 = thrust::device_pointer_cast(idx1);
+	thrust::device_ptr<int> dpIdx2 = thrust::device_pointer_cast(idx2);
+	thrust::sort_by_key(dpIdx1, dpIdx1 + k, dpIdx2);
+
+#if CHECK_FOR_CUDA_ERROR
+	CUDA_CHECK_ERROR()
+#endif
+
+	//free stuff
+	free(h_idx1);
+	free(h_idx2);
+	cudaFree(devStates);
+	
+//	Helper::printGpuArray(idx1, k, "i:");
+//	Helper::printGpuArray(idx2, k, "j:");
 }
 
 void GPUSparse::logSimilarToFile(const char *path, ImageHandler* iHandler) const

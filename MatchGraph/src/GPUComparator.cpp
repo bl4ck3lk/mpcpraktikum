@@ -13,6 +13,17 @@
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
 
+inline __int64_t continuousTimeNs()
+ {
+         timespec now;
+         clock_gettime(CLOCK_REALTIME, &now);
+
+         __int64_t result = (__int64_t ) now.tv_sec * 1000000000
+                         + (__int64_t ) now.tv_nsec;
+
+         return result;
+ }
+
 GPUComparator::GPUComparator()
 {
 	openCVcomp = new ComparatorCVGPU();
@@ -21,10 +32,12 @@ GPUComparator::GPUComparator()
 	h_idx2 = NULL;
 	h_res = NULL;
 	currentArraySize = 0;
+	totalTime = 0;
 }
 
 GPUComparator::~GPUComparator()
 {
+	printf("Total comparison time:%f\n", totalTime*(1/(double)1000000000)); 
 	if (h_idx1 != NULL) free(h_idx1);
 	if (h_idx2 != NULL) free(h_idx2);
 	if (h_res != NULL) free(h_res);
@@ -58,9 +71,13 @@ void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 		h_idx2 = Helper::downloadGPUArrayInt(d_idx2, arraySize);
 		h_res = Helper::downloadGPUArrayInt(d_res, arraySize);
 
-		printf("Comparing %i images with OpenCV_GPU...\n", arraySize);
+		__int64_t startTime = continuousTimeNs();
 		openCVcomp->compareGPU(iHandler, h_idx1, h_idx2, h_res, arraySize, false);
-
+		__int64_t timeNeeded = continuousTimeNs()-startTime;
+		totalTime += timeNeeded;
+		//printf("Compared %i images with OpenCV_GPU. Time: %f\n", arraySize,timeNeeded*(1/(double)1000000000));
+		printf("%f\n", timeNeeded*(1/(double)1000000000));
+		
 		//upload Result
 		Helper::cudaMemcpyArrayInt(h_res, d_res, arraySize);
 	}
