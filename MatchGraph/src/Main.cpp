@@ -12,7 +12,7 @@
 #include "GPUComparator.h"
 #include "CPUComparator.h"
 #include "CMEstimatorCPU.h"
-#include "CMEstimatorGPUSparse.h"
+#include "CMEstimatorGPUSparseOPT.h"
 #include "CMEstimatorGPUSparseMax.h"
 #include "Initializer.h"
 #include "InitializerGPU.h"
@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 //	return 1;
 
 	char* usageBuff = new char[1024];
-	strcpy(usageBuff, "Usage: <path> <ext> <iter> [<k>] [<lambda>] [<logDir>]\n"
+	strcpy(usageBuff, "Usage: <path> <ext> <iter> [<k>] [<lambda>] [<logDir>] [<randStep>] [<est>]\n"
 			"       Starts algorithm for <iter> iterations on images in directory <path> with specified file\n"
 			"       extension <ext>. Parameter <k> [1,#numImages] defines how many images shall be compared each\n"
 			"       iteration (k-best). Model parameter lambda [0,1] (default = 1) influences the computation of\n"
@@ -73,7 +73,8 @@ int main(int argc, char** argv)
 	int _k = 1;
 	float _lambda = 1.0;
 	const char* logFilePath = "log/matchGraph.log";
-
+	int _randStep = 0;
+	int _est = 0;
 
 	if (strcmp(dir, "-r") == 0)
 	{
@@ -139,6 +140,16 @@ int main(int argc, char** argv)
 		  logFilePath = argv[acount++];
 		}
 
+		if (argc > 7) //optional random step config
+		{
+			_randStep = atoi(argv[acount++]);
+		}
+	
+		if (argc > 8) //optional choose estimator: 0 for random 1 for other
+                {
+                        _est = atoi(argv[acount++]); 
+                }  
+
 	}
 	if (_iter < 1)
 	{
@@ -178,7 +189,7 @@ int main(int argc, char** argv)
 
 	//determines after what number of iterations a random step should be executed.
 	// set to 0 for no random steps at all
-	const int randomCompareSteps = 10;
+	const int randomCompareSteps = _randStep;
 
 	
 	if (!randomMode)
@@ -197,7 +208,10 @@ int main(int argc, char** argv)
 	T = new GPUSparse(dim, lambda);
 	GPUSparse* T_sparse = dynamic_cast<GPUSparse*>(T);
 	init = new InitializerGPU();
-	CME = new CMEstimatorGPUSparse();
+	if(_est == 0)
+		CME = new CMEstimatorGPUSparseOPT();
+	else
+		CME = new CMEstimatorGPUSparseMax();
 	comparator = new GPUComparator();
 #else
 	printf("Executing CPU Version.\n");

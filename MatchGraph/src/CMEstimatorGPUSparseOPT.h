@@ -33,6 +33,8 @@ public:
 
 private:
 	int lastSize;
+	
+	__int64_t totalTime;
 
 	int* d_idx1;
 	int* d_idx2;

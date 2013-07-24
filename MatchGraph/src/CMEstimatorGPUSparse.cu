@@ -424,7 +424,7 @@ culaSparseStatus CMEstimatorGPUSparse::computeConfidenceMeasure(culaSparseHandle
 	{
 		char buffer[512];
 		culaSparseGetResultString(handle, &result, buffer, 512);
-		printf("%s\n", buffer);
+		//printf("%s\n", buffer);
 	}
 
 
