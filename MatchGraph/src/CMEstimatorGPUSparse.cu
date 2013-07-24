@@ -125,6 +125,7 @@ CMEstimatorGPUSparse::CMEstimatorGPUSparse() {
 
 	/* cula initialization */
 	//initCula();
+	printf("Using random estimator (CMEstimatorGPUSparse)\n");
 }
 
 

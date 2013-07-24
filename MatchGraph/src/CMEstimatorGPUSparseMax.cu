@@ -131,6 +131,7 @@ CMEstimatorGPUSparseMax::~CMEstimatorGPUSparseMax() {
 	if (d_idx2 != NULL) cudaFree(d_idx2);
 	if (d_res != NULL) cudaFree(d_res);
 	if (res != NULL) free(res);
+	printf("Using estimator: CMEstimatorGPUSparseMax\n");
 }
 
 int* CMEstimatorGPUSparseMax::getIdx1Ptr()

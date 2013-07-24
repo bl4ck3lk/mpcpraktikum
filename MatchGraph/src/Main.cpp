@@ -175,9 +175,19 @@ int main(int argc, char** argv)
 	const float lambda = _lambda;
 	const int kBest = _k;
 	const int sizeOfInitIndicesList = kBest;
+
+	//determines after what number of iterations a random step should be executed.
+	// set to 0 for no random steps at all
+	const int randomCompareSteps = 10;
+
 	
 	if (!randomMode)
 		printf("#Directory \t%s\n#Images\t%i\n#k\t%i\n", dir, iHandler->getTotalNr(), kBest);
+
+	if (randomCompareSteps > 0)
+		printf("Doing random step all %i iterations\n", randomCompareSteps);
+	else
+		printf("Doing no random steps at all\n");
 
 	////////////////////////////////////
 	// Initialize computation handler //
@@ -200,7 +210,6 @@ int main(int argc, char** argv)
 
 	comparator->setRandomMode(randomMode);
 
-	printf("#i\tsolver\terror\tcomparator\n");
 	__int64_t startTime = continuousTimeNs();
 	
 	/////////////////////////////////////////////////////////
@@ -213,9 +222,9 @@ int main(int argc, char** argv)
 			////////////////////
 			//Initialize Phase//
 			////////////////////
-			printf("Initializing Matrix.\n");
 			init->doInitializationPhase(T, iHandler, comparator, sizeOfInitIndicesList);
 			printf("Initialization of T done. \n");
+			printf("#i\tsolver\terror\tcomparator\n");
 		}
 
 		/////////////////////////
@@ -227,11 +236,10 @@ int main(int argc, char** argv)
 #if GPU_VERSION
 		//get the next images that should be compared (implicitly solving eq. system => confidence measure matrix)
 
-		if(i % 10 == 0) //every 10th step a random step //TODO shall first iter be random? is not bad as it is like 
-								//a double initialization -> more start information
-			CME->computeRandomComparisons(T, kBest); 
+		if(randomCompareSteps > 0 && i % randomCompareSteps  == 0)
+			CME->computeRandomComparisons(T, kBest); //a random comparison step
 		else
-			CME->getKBestConfMeasures(T, NULL, kBest);
+			CME->getKBestConfMeasures(T, NULL, kBest); //a normal step using the solver
 		//compare images which are located in the device arrays of CME
 		comparator->doComparison(iHandler, T, CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest); //device pointer
 		//update matrix with new information (compared images)

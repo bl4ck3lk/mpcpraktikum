@@ -125,6 +125,7 @@ CMEstimatorGPUSparseOPT::CMEstimatorGPUSparseOPT() {
 
 	res = NULL; //todo remove me (testing)
 	idx1 = NULL; //todo remove me (testing)
+	printf("Using estimator: CMEstimatorGPUSparseOPT\n");
 }
 
 
