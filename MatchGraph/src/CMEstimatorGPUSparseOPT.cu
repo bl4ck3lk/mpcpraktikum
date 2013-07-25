@@ -317,9 +317,10 @@ void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, i
 	culaSparseSetJacobiPreconditioner(handle, plan, 0); //associate jacobi preconditioner with the plan
 
 	//Calcuate n of columns and elements per column
-	double f = double(kBest)/double(dim);
+	double ddim = double(dim);
+	double f = (double(kBest)/ddim) < 0.5 ? 0.5 : (double(kBest)/ddim);
 //	printf("Dim: %i \t kBest: %i\n",dim,kBest);
-	double perCol =  double(kBest)/(exp(-(1/(f*double(dim)))*double(dim))*double(dim));
+	double perCol =  double(kBest)/(ddim*pow(ddim, 0.55))*(exp(-(1/(f*ddim))*ddim)*ddim);
 	int xBestForThisColumn = ceil(perCol);
 	if (!xBestForThisColumn) xBestForThisColumn = 1; //at least 1 per column
 	int nrCols = (kBest/xBestForThisColumn) + 2; //round-off error
