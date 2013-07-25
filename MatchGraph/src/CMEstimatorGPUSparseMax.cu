@@ -26,6 +26,8 @@
 #include "Tester.h"
 #include "Helper.h"
 
+#define CHECK_FOR_CUDA_ERROR 0
+
 #define CUDA_CHECK_ERROR() {							\
     cudaError_t err = cudaGetLastError();					\
     if (cudaSuccess != err) {						\
@@ -233,7 +235,9 @@ void CMEstimatorGPUSparseMax::determineBestConfMeasures(double* xColumnDevice, d
 	 * assigned a very low value to prevent them from getting chosen later.
 	 */
 	initKernel<<<numBlocks, numThreads>>>(gpuIndices, xColumnDevice, bColumnDevice, dim, columnIdx);
-	CUDA_CHECK_ERROR();
+#if CHECK_FOR_CUDA_ERROR
+  CUDA_CHECK_ERROR() 
+#endif
 
 	//wrap column device pointer
 	thrust::device_ptr<double> dp_xColumn = thrust::device_pointer_cast(xColumnDevice);
@@ -241,13 +245,13 @@ void CMEstimatorGPUSparseMax::determineBestConfMeasures(double* xColumnDevice, d
 	//sort x column and index array respectively
 	//already known values will be the last ones due to initialization
 	thrust::sort_by_key(dp_xColumn, dp_xColumn + dim, dp_gpuIndices, thrust::greater<double>());
-	CUDA_CHECK_ERROR();
 
 	//save the first kBest values in the tmp arrays, after the best values by now
 	numBlocks = (kBest + THREADS - 1) / THREADS;
 	saveTMPindicesKernel<<<numBlocks, numThreads>>>(gpuIndices, d_tmpIndices, d_tmpConfidences, xColumnDevice, dim, kBest);
-	CUDA_CHECK_ERROR();
-
+#if CHECK_FOR_CUDA_ERROR
+  CUDA_CHECK_ERROR() 
+#endif
 	//free memory
 	cudaFree(gpuIndices);
 }
@@ -267,7 +271,9 @@ void CMEstimatorGPUSparseMax::getKBestConfMeasures(MatrixHandler* T, float* F, i
 	cudaMalloc((void**) &d_tmpConfidences, 2*kBest*sizeof(double));
 	int numBlocks = ((2*kBest) + THREADS - 1) / THREADS;
 	initTMPIndexArrays<<<numBlocks, THREADS>>>(d_tmpIndices, d_tmpConfidences, 2*kBest);
-	CUDA_CHECK_ERROR()
+#if CHECK_FOR_CUDA_ERROR
+  CUDA_CHECK_ERROR() 
+#endif
 
 	/* if index array size changed since last use, allocate new device memory
 	 * with new size and free old device memory. Otherwise reuse device memory.
@@ -350,7 +356,9 @@ void CMEstimatorGPUSparseMax::getKBestConfMeasures(MatrixHandler* T, float* F, i
 			thrust::device_ptr<long> dp_tmpIndices = thrust::device_pointer_cast(d_tmpIndices);
 			thrust::device_ptr<double> dp_tmpConfidences = thrust::device_pointer_cast(d_tmpConfidences);
 			thrust::sort_by_key(dp_tmpConfidences, dp_tmpConfidences + 2*kBest, dp_tmpIndices, thrust::greater<double>());
-			CUDA_CHECK_ERROR();
+#if CHECK_FOR_CUDA_ERROR
+  CUDA_CHECK_ERROR() 
+#endif
 		}
 
 //		printf("Column %i, try to determine %i best values. Actually determined by now %i values\n", i, determineXforThisColumn, countIndices);
@@ -369,7 +377,9 @@ void CMEstimatorGPUSparseMax::getKBestConfMeasures(MatrixHandler* T, float* F, i
 	thrust::device_ptr<int> dp_idx2 = thrust::device_pointer_cast(d_idx2);
 
 	thrust::sort_by_key(dp_idx1, dp_idx1 + kBest, dp_idx2); //sort ascending
-	CUDA_CHECK_ERROR()
+#if CHECK_FOR_CUDA_ERROR
+  CUDA_CHECK_ERROR() 
+#endif
 
 	//if (false) //debug printing
 	//{
@@ -398,7 +408,9 @@ culaSparseStatus CMEstimatorGPUSparseMax::computeConfidenceMeasure(culaSparseHan
 
 	// execute plan
 	culaSparseStatus status = culaSparseExecutePlan(handle, plan, &config, &result);
-	CUDA_CHECK_ERROR();
+#if CHECK_FOR_CUDA_ERROR
+  CUDA_CHECK_ERROR() 
+#endif
 
 	//print if error
 	if (culaSparseNoError != status)

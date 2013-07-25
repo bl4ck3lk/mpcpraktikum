@@ -13,7 +13,7 @@
 #include <set>
 #include <map>
 #include <string>
-
+#include <curand_kernel.h>
 
 typedef std::map<int,std::set<int> > myElemMap;
 
@@ -46,6 +46,9 @@ private:
 	//a map containing all dissimilar elements with the row index as key and a set
 	//of column indices as value
 	myElemMap dissimilarMap;
+	
+	curandState *devStates;
+	int lastRandomK;
 
 	void addNewToRow(const int row, const int j);
 	void addDissimilarToColumn(const int column, const int row);
@@ -78,7 +81,7 @@ public:
 	float* getColumn(int i) const;
 	double* getColumnDouble(int i) const;
 
-	void fillRandomCompareIndices(int* idx1, int* idx2, int* res, const int k) const;
+	void fillRandomCompareIndices(int* idx1, int* idx2, int* res, const int k);
 
 	void logSimilarToFile(const char *path, ImageHandler* iHandler) const;
 };

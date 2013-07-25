@@ -13,7 +13,6 @@
 #include <thrust/sort.h>
 #include <thrust/scan.h>
 #include <fstream>
-#include <curand_kernel.h>
 
 #define CHECK_FOR_CUDA_ERROR 0
 
@@ -223,12 +222,12 @@ __global__ void columnWriteKernelDouble(double* dst, int* colIdx, int* rowPtr, i
 	}
 }
 
-__global__ void setupCurandkernel(curandState *state)
+__global__ void setupCurandkernel(curandState *state, int seed)
 {
     int tid = threadIdx.x + blockIdx.x * blockDim.x;
     /* Each thread gets same seed, a different sequence number, no offset */
     /* (from CUDA CURAND documentation) */
-    curand_init(1234, tid, 0, &state[tid]);
+    curand_init(seed, tid, 0, &state[tid]);
 }
 
 
@@ -331,6 +330,8 @@ GPUSparse::GPUSparse(unsigned int _dim, float _lambda) :
 	initColIdxRowPtrKernel<<<numBlocks, numThreads>>>(_gpuColIdx, _gpuRowPtr, dim);
 	initKernel<<<numBlocks, numThreads>>>(_gpuDegrees, 0, dim);
 	initKernel<<<numBlocks, numThreads>>>(_gpuDiagPos, 0, dim);
+	
+	lastRandomK = -1;
 }
 
 GPUSparse::~GPUSparse()
@@ -710,10 +711,28 @@ unsigned int GPUSparse::getNNZ() const
 
 
 //TODO not complete yet.
-void GPUSparse::fillRandomCompareIndices(int* idx1, int* idx2, int* res, const int k) const
+void GPUSparse::fillRandomCompareIndices(int* idx1, int* idx2, int* res, const int k)
 {
 //	Helper::printGpuArray(_gpuColIdx, getNNZ(), "colIdx (on GPU)");
 //	Helper::printGpuArray(_gpuRowPtr, dim+1, "rowPtr (on GPU)");
+	
+	const int numThreads = 256;
+	const int numBlocks = 1 + (numThreads/k);
+
+	if(lastRandomK != k)
+	{
+	  if(lastRandomK != -1)
+	  {
+		cudaFree(devStates);
+	  }
+
+	  const int cudaInitSeed = rand() % 1234567;
+	  
+	  cudaMalloc((void **)&devStates, numThreads * numBlocks *  sizeof(curandState));
+	  setupCurandkernel<<<numBlocks, numThreads>>>(devStates, cudaInitSeed);
+	}
+	
+	lastRandomK = k;
 
 	initKernel<<<256, 256>>>(res, 0, k); //TODO necessary to initialize res ?
 
@@ -722,14 +741,7 @@ void GPUSparse::fillRandomCompareIndices(int* idx1, int* idx2, int* res, const i
 	initKernel<<<256, 256>>>(idx2, dim+1, k);
 
 	cudaDeviceSynchronize();
-
-	const int numThreads = 256;
-	const int numBlocks = 1 + (numThreads/k);
-
-	curandState *devStates;
-
-	cudaMalloc((void **)&devStates, numThreads * numBlocks *  sizeof(curandState));
-
+	
 	randomComparisonFillKernel<<<numBlocks, numThreads>>>(idx1, idx2, _gpuRowPtr, _gpuColIdx, k, dim, devStates);
 
 #if CHECK_FOR_CUDA_ERROR
@@ -788,8 +800,7 @@ void GPUSparse::fillRandomCompareIndices(int* idx1, int* idx2, int* res, const i
 	//free stuff
 	free(h_idx1);
 	free(h_idx2);
-	cudaFree(devStates);
-	
+
 //	Helper::printGpuArray(idx1, k, "i:");
 //	Helper::printGpuArray(idx2, k, "j:");
 }

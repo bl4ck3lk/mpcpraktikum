@@ -137,7 +137,7 @@ int main(int argc, char** argv)
 		
 		if (argc > 6) //optional param log file path
 		{
-		  logFilePath = argv[acount++];
+		  	logFilePath = argv[acount++];
 		}
 
 		if (argc > 7) //optional random step config
@@ -147,8 +147,8 @@ int main(int argc, char** argv)
 	
 		if (argc > 8) //optional choose estimator: 0 for random 1 for other
                 {
-                        _est = atoi(argv[acount++]); 
-                }  
+                        _est = atoi(argv[acount++]);
+                }
 
 	}
 	if (_iter < 1)
