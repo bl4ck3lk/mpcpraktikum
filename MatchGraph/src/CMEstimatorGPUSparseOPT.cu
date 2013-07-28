@@ -262,7 +262,7 @@ void CMEstimatorGPUSparseOPT::determineBestConfMeasures(double* xColumnDevice, d
 
 void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
 {
-	//printf("[ESTIMATOR]: Determine kBest confidence measures on GPU (randomly picking columns).\n");
+//	printf("[ESTIMATOR]: Determine kBest confidence measures on GPU (randomly picking columns).\n");
 
 	//invoked only on sparse MatrixHandler
 	GPUSparse* T_sparse = dynamic_cast<GPUSparse*> (T);
@@ -397,7 +397,7 @@ void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, i
 	}
 	__int64_t solverDiff = continuousTimeNs()-startCula;
 	totalTime += solverDiff;
-	//printf("Solver time [%i of %i NO ERROR]: %f\n", noError, solverTrials, solverDiff*(1/(double)1000000000));
+//	printf("Solver time [%i of %i NO ERROR]: %f\n", noError, solverTrials, solverDiff*(1/(double)1000000000));
 	printf("%f\t%i\t", solverDiff*(1/(double)1000000000), (solverTrials-noError));
 
 	numBlocks = (kBest + THREADS - 1) / THREADS;

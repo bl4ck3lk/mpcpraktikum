@@ -26,6 +26,11 @@ void Helper::cudaMemcpyArrayInt(int* h_src, int* d_trg, int size)
 	cudaMemcpy(d_trg, h_src, size*sizeof(int), cudaMemcpyHostToDevice);
 }
 
+void Helper::cudaMemcpyArrayIntToHost(int* d_src, int* h_trg, int size)
+{
+	cudaMemcpy(h_trg, d_src, sizeof(int)*size, cudaMemcpyDeviceToHost);
+}
+
 void Helper::printGpuArray(int * devPtr, const int size, std::string message)
 {
 	int* cpu = (int*) malloc(sizeof(int)*size);

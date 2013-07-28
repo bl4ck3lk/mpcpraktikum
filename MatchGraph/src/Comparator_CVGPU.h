@@ -31,6 +31,7 @@ struct IMG
 	cv::Mat h_descriptors; //only for debugging
 	std::string path; //only for debugging
 	bool gpuFlag;
+	bool downloadedToHost;
 };
 
 class ComparatorCVGPU

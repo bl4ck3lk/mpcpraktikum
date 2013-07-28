@@ -38,9 +38,9 @@ GPUComparator::GPUComparator()
 GPUComparator::~GPUComparator()
 {
 	printf("Total comparison time:%f\n", totalTime*(1/(double)1000000000)); 
-	if (h_idx1 != NULL) free(h_idx1);
-	if (h_idx2 != NULL) free(h_idx2);
-	if (h_res != NULL) free(h_res);
+ 	if (h_idx1 != NULL) free(h_idx1);
+ 	if (h_idx2 != NULL) free(h_idx2);
+ 	if (h_res != NULL) free(h_res);
 
 	delete openCVcomp;
 }
@@ -67,9 +67,9 @@ void GPUComparator::doComparison(ImageHandler* iHandler, MatrixHandler* T, int* 
 	{
 		//OpenCV Image Comparison
 		if (arraySize != currentArraySize) initArrays(arraySize);
-		h_idx1 = Helper::downloadGPUArrayInt(d_idx1, arraySize);
-		h_idx2 = Helper::downloadGPUArrayInt(d_idx2, arraySize);
-		h_res = Helper::downloadGPUArrayInt(d_res, arraySize);
+		Helper::cudaMemcpyArrayIntToHost(d_idx1, h_idx1, arraySize);
+		Helper::cudaMemcpyArrayIntToHost(d_idx2, h_idx2,  arraySize);
+		Helper::cudaMemcpyArrayIntToHost(d_res, h_res, arraySize);
 
 		__int64_t startTime = continuousTimeNs();
 		openCVcomp->compareGPU(iHandler, h_idx1, h_idx2, h_res, arraySize);

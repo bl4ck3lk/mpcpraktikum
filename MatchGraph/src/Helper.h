@@ -19,6 +19,7 @@ public:
 	static double* downloadGPUArrayDouble(double* devPtr, const int size);
 
 	static void cudaMemcpyArrayInt(int* h_src, int* d_trg, int size);
+	static void cudaMemcpyArrayIntToHost(int* d_src, int* h_trg, int size);
 
 	static void printGpuArray(int* devPtr, const int size, const std::string message);
 	static void printGpuArrayF(float* devPtr, const int size, const std::string message);
