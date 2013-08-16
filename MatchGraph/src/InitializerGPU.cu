@@ -1,13 +1,13 @@
 /*
  * InitializerGPU.cu
  *
- * Initializes a given directory by indexing all images within this directory
- * in a map such that the image-path can be obtained fast by the corresponding
- * index.
- * Initializes the T Matrix.
+ * This class executes the initializing phase of the match graph algorithm.
+ * This is done by random image comparisons on device for the GPU-implementation.
+ * At this point, no duplicated entries or symmetric entries should be handed
+ * over to the image comparison.
  *
  *  Created on: Jun 29, 2013
- *      Author: schwarzk
+ *      Author: Fabian
  */
 
 #include "InitializerGPU.h"
@@ -33,7 +33,9 @@
 
 const int THREADS = 128;
 
-//Initialize index arrays
+/*
+ * Initialize index arrays with it's index.
+ */
 static __global__ void initIndexArrays(int* d_idx1, int* d_idx2, int* d_res, int dim, int initArraySize)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -46,7 +48,10 @@ static __global__ void initIndexArrays(int* d_idx1, int* d_idx2, int* d_res, int
 	}
 }
 
-//Simple kernel to shuffle an array on GPU (prevents memcpy). To be called only with ONE thread!
+/*
+ * Simple kernel to shuffle an array on GPU (prevents memcpy). To be called only with ONE thread!
+ * Since the initialization phase is only executed once, runtime is no crucial here.
+ */
 static __global__ void shuffleArrayKernel(int* array, int dim, int initArraySize, curandState* globalStates, unsigned long seed)
 {
 	int idx = threadIdx.x;
@@ -63,7 +68,10 @@ static __global__ void shuffleArrayKernel(int* array, int dim, int initArraySize
 	}
 }
 
-//Kernel to swap upper diagonal matrix elements
+/*
+ * Kernel to swap upper diagonal matrix elements, to get more image-pairs, since the upper
+ * diagonal matrix is masked out.
+ */
 static __global__ void swapUpperDiagonal(int* idx1, int* idx2, int initArraySize)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -80,7 +88,9 @@ static __global__ void swapUpperDiagonal(int* idx1, int* idx2, int initArraySize
 	}
 }
 
-//check for symmetric entries (duplicates caused by swapping earlier)
+/*
+ * Check for duplicates caused by prior swapping of upper diagonal matrix elements.
+ */
 static __global__ void checkForDuplicates(int* idx1, int* idx2, int initArraySize, int dim)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -110,15 +120,18 @@ static __global__ void checkForDuplicates(int* idx1, int* idx2, int initArraySiz
 	}
 }
 
-
+/*
+ * Constructor
+ */
 InitializerGPU::InitializerGPU()
 {
-
 }
 
+/*
+ * Destructor
+ */
 InitializerGPU::~InitializerGPU()
 {
-
 }
 
 /*
@@ -136,7 +149,7 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 		exit(EXIT_FAILURE);
 	}
 
-	//Initialization arrays
+	//allocate initialization arrays
 	int* d_initIdx1;
 	int* d_initIdx2;
 	int* d_initRes;
@@ -144,15 +157,16 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 	cudaMalloc(&d_initIdx2, dim*sizeof(int));
 	cudaMalloc(&d_initRes, initArraySize*sizeof(int));
 
-	//initialize these arrays
+	//initialize arrays
 	int numBlocks = (dim + THREADS - 1) / THREADS;
 	initIndexArrays<<<numBlocks, THREADS>>>(d_initIdx1, d_initIdx2, d_initRes, dim, initArraySize);
 	CUDA_CHECK_ERROR()
 
+	//allocate memory for debug printing
 	int* testResult1 = (int*) malloc(dim*sizeof(int));
 	int* testResult2 = (int*) malloc(dim*sizeof(int));
 	int* testResult3 = (int*) malloc(initArraySize*sizeof(int));
-	//todo remove debug printing
+
 	if (debugPrint)
 	{
 		printf("Init-Index-Array initialization\n");
@@ -174,7 +188,6 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 	shuffleArrayKernel<<<1, 1>>>(d_initIdx2, dim, initArraySize, states, 3*time(NULL)); //ensure different seeds
 	CUDA_CHECK_ERROR()
 
-	//todo remove debug printing
 	if (debugPrint)
 	{
 		printf("shuffled\n");
@@ -190,7 +203,6 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 	swapUpperDiagonal<<<numBlocks, THREADS>>>(d_initIdx1, d_initIdx2, initArraySize);
 	CUDA_CHECK_ERROR()
 
-	//todo remove debug printing
 	if (debugPrint)
 	{
 		printf("swapped\n");
@@ -208,7 +220,6 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 	thrust::sort_by_key(dp_initIdx1, dp_initIdx1 + initArraySize, dp_initIdx2); //ascending
 	CUDA_CHECK_ERROR();
 
-	//todo remove debug printing
 	if (debugPrint)
 	{
 		printf("sorted\n");
@@ -222,7 +233,6 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 	checkForDuplicates<<<numBlocks, THREADS>>>(d_initIdx1, d_initIdx2, initArraySize, dim);
 	CUDA_CHECK_ERROR();
 
-	//todo remove debug printing
 	if (debugPrint)
 	{
 		printf("masked duplicates\n");
@@ -236,7 +246,6 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 	thrust::sort_by_key(dp_initIdx1, dp_initIdx1 + initArraySize, dp_initIdx2); //ascending
 	CUDA_CHECK_ERROR();
 
-	//todo remove debug printing
 	if (debugPrint)
 	{
 		printf("sorted\n");
@@ -249,7 +258,6 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 	//compare images
 	comparator->doComparison(iHandler, T, d_initIdx1, d_initIdx2, d_initRes, initArraySize);
 
-	//todo remove debug printing
 	if (debugPrint)
 	{
 		printf("result after comparison -> this will be given to GPUSparse to update the Marix\n");
@@ -260,7 +268,6 @@ void InitializerGPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 		Tester::printArray(testResult2, initArraySize);
 		Tester::printArray(testResult3, initArraySize);
 	}
-
 
 	//initialize T Matrix with compared images
 	//invoked only on sparse matrixhandler

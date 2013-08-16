@@ -2,7 +2,7 @@
 # Add source files here
 TARGET		:= Main
 # Cuda source files (compiled with cudacc)
-CUFILES		:= GPUMatrix.cu GPUSparse.cu CMEstimatorGPUSparse.cu InitializerGPU.cu Helper.cu
+CUFILES		:= GPUSparse.cu InitializerGPU.cu Helper.cu CMEstimatorGPUSparseMax.cu CMEstimatorGPUSparseOPT.cu
 # C/C++ source files (compiled with gcc / c++)
 CCFILES		:= Main.cpp CPUImpl.cpp GPUComparator.cpp CMEstimatorCPU.cpp Tester.cpp ImageHandler.cpp CPUComparator.cpp InitializerCPU.cpp Comparator_CVGPU.cpp Comparator_CPU.cpp
 
@@ -63,7 +63,7 @@ OSLOWER = $(shell uname -s 2>/dev/null | tr [:upper:] [:lower:])
 # Compilers
 NVCC       := $(CUDA_INSTALL_PATH)/bin/nvcc 
 CXX        := g++
-CC         := gcc
+CC         := gcc 
 LINK       := g++ -fPIC
 
 # Includes

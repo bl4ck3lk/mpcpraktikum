@@ -1,8 +1,11 @@
 /*
  * Helper.cpp
  *
+ * This class contains several static helper functions to be used
+ * in this project.
+ *
  *  Created on: Jul 10, 2013
- *      Author: schwarzk
+ *      Author: Armin, Fabian
  */
 
 #include "Helper.h"
@@ -21,16 +24,25 @@ if (cudaSuccess != err) {						\
 }									\
 }
 
+/*
+ * Upload data from host to device.
+ */
 void Helper::cudaMemcpyArrayInt(int* h_src, int* d_trg, int size)
 {
 	cudaMemcpy(d_trg, h_src, size*sizeof(int), cudaMemcpyHostToDevice);
 }
 
+/*
+ * Download data from device to host.
+ */
 void Helper::cudaMemcpyArrayIntToHost(int* d_src, int* h_trg, int size)
 {
 	cudaMemcpy(h_trg, d_src, sizeof(int)*size, cudaMemcpyDeviceToHost);
 }
 
+/*
+ * Print an integer device array on console with a given message.
+ */
 void Helper::printGpuArray(int * devPtr, const int size, std::string message)
 {
 	int* cpu = (int*) malloc(sizeof(int)*size);
@@ -45,6 +57,9 @@ void Helper::printGpuArray(int * devPtr, const int size, std::string message)
 	free(cpu);
 }
 
+/*
+ * Print a float device array on console with a given message.
+ */
 void Helper::printGpuArrayF(float * devPtr, const int size, std::string message)
 {
 	float* cpu = (float*) malloc(sizeof(float)*size);
@@ -59,6 +74,9 @@ void Helper::printGpuArrayF(float * devPtr, const int size, std::string message)
 	free(cpu);
 }
 
+/*
+ * Print a double device array on console with a given message.
+ */
 void Helper::printGpuArrayD(double * devPtr, const int size, std::string message)
 {
 	double* cpu = (double*) malloc(sizeof(double)*size);
@@ -73,6 +91,9 @@ void Helper::printGpuArrayD(double * devPtr, const int size, std::string message
 	free(cpu);
 }
 
+/*
+ * Print a long device array on console with a given message.
+ */
 void Helper::printGpuArrayL(long * devPtr, const int size, std::string message)
 {
 	long* cpu = (long*) malloc(sizeof(long)*size);
@@ -87,6 +108,9 @@ void Helper::printGpuArrayL(long * devPtr, const int size, std::string message)
 	free(cpu);
 }
 
+/*
+ * Download given device memory location to host and return a pointer to it.
+ */
 int* Helper::downloadGPUArrayInt(int* devPtr, const int size)
 {
 	int* cpu = (int*) malloc(sizeof(int)*size);
@@ -94,6 +118,9 @@ int* Helper::downloadGPUArrayInt(int* devPtr, const int size)
 	return cpu;
 }
 
+/*
+ * Download given device memory location to host and return a pointer to it.
+ */
 float* Helper::downloadGPUArrayFloat(float* devPtr, const int size)
 {
 	float* cpu = (float*) malloc(sizeof(float)*size);
@@ -101,6 +128,9 @@ float* Helper::downloadGPUArrayFloat(float* devPtr, const int size)
 	return cpu;
 }
 
+/*
+ * Download given device memory location to host and return a pointer to it.
+ */
 double* Helper::downloadGPUArrayDouble(double* devPtr, const int size)
 {
 	double* cpu = (double*) malloc(sizeof(double)*size);

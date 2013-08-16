@@ -1,7 +1,7 @@
 /*
  * Main.cpp
  *
- *	Start class for the match graph algorithm
+ *	Start class for the match graph algorithm.
  *
  *  Created on: May 29, 2013
  *      Author: Fabian, Armin, Julio
@@ -25,26 +25,27 @@
 #include <helper_cuda.h>
 #include <string.h>
 
-#define GPU_VERSION 1
+#define GPU_VERSION 1 //switch between CPU and GPU implementation
 
 inline __int64_t continuousTimeNs()
- {
-         timespec now;
-         clock_gettime(CLOCK_REALTIME, &now);
+{
+	timespec now;
+	clock_gettime(CLOCK_REALTIME, &now);
 
-         __int64_t result = (__int64_t ) now.tv_sec * 1000000000
-                         + (__int64_t ) now.tv_nsec;
+	__int64_t result = (__int64_t ) now.tv_sec * 1000000000
+			+ (__int64_t ) now.tv_nsec;
 
-         return result;
- }
+	return result;
+}
 
 int main(int argc, char** argv)
 {
+	//seed once for the algorithm
 	srand((unsigned int)time(NULL));
 
-//	generateGold();
-//	return 1;
-
+	////////////////////////
+	//Read input arguments//
+	////////////////////////
 	char* usageBuff = new char[1024];
 	strcpy(usageBuff, "Usage: <path> <ext> <iter> [<k>] [<lambda>] [<logDir>] [<randStep>] [<est>]\n"
 			"       Starts algorithm for <iter> iterations on images in directory <path> with specified file\n"
@@ -54,7 +55,8 @@ int main(int argc, char** argv)
 			"\nOR\n"
 			"       -r <dim> <k> <iter> [<lambda>]\tRandom mode which does comparison not on real image data\n"
 			"       but just in a random fashion for dimension <dim> and <iter> iterations and given\n"
-			"       parameter <k> [1,dim] and model parameter lambda [0,1] (default = 1)\n");
+			"       parameter <k> [1,dim] and model parameter lambda [0,1] (default = 1). No image comparison\n"
+			"		is done is this mode.\n");
 
 	if (argc < 4)
 	{
@@ -65,7 +67,7 @@ int main(int argc, char** argv)
 	int acount = 1;
 
 	ImageHandler* iHandler; //handler object for image files
-	bool randomMode = false;
+	bool randomMode = false; //no real data is used
 	const char* dir = argv[acount++];
 
 	int _dim = -1;
@@ -162,11 +164,6 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	/* Some directories...
-	 /graphics/projects/data/photoDB_fromWWW/photoCollections/Flickr/A/aachen
-	 /graphics/projects/data/canon_5d/2012_12_11_similar_pics
-	 * */
-
 	//Initialize Cuda device
 	findCudaDevice(argc, (const char **) argv);
 
@@ -188,9 +185,8 @@ int main(int argc, char** argv)
 	const int sizeOfInitIndicesList = kBest;
 
 	//determines after what number of iterations a random step should be executed.
-	// set to 0 for no random steps at all
+	//set to 0 for no random steps at all
 	const int randomCompareSteps = _randStep;
-
 	
 	if (!randomMode)
 		printf("#Directory \t%s\n#Images\t%i\n#k\t%i\n", dir, iHandler->getTotalNr(), kBest);
@@ -224,6 +220,7 @@ int main(int argc, char** argv)
 
 	comparator->setRandomMode(randomMode);
 
+	//start runtime measurement
 	__int64_t startTime = continuousTimeNs();
 	
 	/////////////////////////////////////////////////////////
@@ -244,7 +241,6 @@ int main(int argc, char** argv)
 		/////////////////////////
 		//Iterative progression//
 		/////////////////////////
-		//printf("************** Iteration %i **************\n", i);
 		printf("%i\t", i);
 		
 #if GPU_VERSION
@@ -268,16 +264,19 @@ int main(int argc, char** argv)
 		T_cpu->set(CME->getIdx1Ptr(), CME->getIdx2Ptr(), CME->getResPtr(), kBest);//host pointer
 #endif
 	}
+	//stop runtime measurement
 	__int64_t endTime = continuousTimeNs();
 	__int64_t diff = endTime - startTime;
 
 	printf("TOTAL RUNTIME:%f\n", diff*(1/(double)1000000000));
 
-	if(!randomMode)
-		T_sparse->logSimilarToFile(logFilePath, iHandler);
-
-	//cleanup
+	//cleanup and logging
 #if GPU_VERSION
+	if(!randomMode) //create logfile
+	{
+		T_sparse->logSimilarToFile(logFilePath, iHandler);
+	}
+
 	delete T_sparse;
 #else
 
@@ -286,7 +285,6 @@ int main(int argc, char** argv)
 	delete[] usageBuff;
 	delete CME;
 	delete comparator;
-
 
 	cudaDeviceReset();
 
