@@ -46,7 +46,7 @@ The program can be run in two different modes for both, the CPU and GPU version.
     Main <path> <ext> <iter> [<k>] [<lambda>] [<logDir>] [<randStep>] [<est>]
 ```
 
-Starts algorithm for __iter__ iterations on images in directory <path> with specified file extension <ext>.  
+Starts algorithm for __iter__ iterations on images in directory __path__ with specified file extension <ext>.  
 Parameter __k__ ([1, #Images], default = 1) defines how many images shall be compared each iteration (k-best).  
 Model parameter __lambda__ ([0,1], default = 1) influences the computation of confidence measures (see [algorithm](http://www.mpi-inf.mpg.de/~kkim/mgc/MainPaper.pdf) for details).   
 __logDir__ sets the path for the logfile (default = "log/matchGraph.log").  
