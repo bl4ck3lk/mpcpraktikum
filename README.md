@@ -3,7 +3,7 @@
 MatchGraphCUDA uses the Nvidia CUDA GPU Framework to find and retrieve similar elements in a large databases. This implementation is based on the work by [Kim and colleagues](http://www.mpi-inf.mpg.de/~kkim/mgc/MainPaper.pdf).
 
 ## Installation
-This project comes with a pre-configured Makefile, in which your specific username has to be set for the USER variable. Furthermore you have to install the following libraries:
+This project comes with a pre-configured Makefile, in which your specific username has to be set for the _USER_ variable. Furthermore you have to install the following libraries:
 
 ### CULA Sparse S5
 The GPU version of this project uses CULA Sparse S5 for the linear algebra tasks. For this, you need to download CULA Sparse from [http://www.culatools.com/sparse/](http://www.culatools.com/sparse/), which is free for personal academic usage.  
