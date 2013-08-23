@@ -12,7 +12,7 @@ To work with Nvidia CUDA you must have a CUDA compatible GPU device with a prope
 The CPU version of this project uses the [Eigen library](http://eigen.tuxfamily.org/index.php?title=Main_Page) for linear algebra tasks. This is already included here and configured in the Makefile, so there is no need to do anything in this particular case.
 
 ### CULA Sparse S5
-The GPU version uses CULA Sparse S5 for the linear algebra. For this, you need to download CULA Sparse from [http://www.culatools.com/sparse/](http://www.culatools.com/sparse/), which is free for personal academic usage.  
+The GPU version uses CULA Sparse S5 for the linear algebra. For this, you need to download CULA Sparse from [http://www.culatools.com/sparse/](http://www.culatools.com/sparse/), which is free for personal academic use.  
 To compile the program, some environment variables have to be set (respective to the installation path of CULA Sparse):
 
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/$(USER)/cula_sparse/lib64/
