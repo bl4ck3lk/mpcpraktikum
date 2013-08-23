@@ -9,7 +9,7 @@ This project comes with a pre-configured Makefile, in which your specific userna
 To work with Nvidia CUDA you must have a CUDA compatible GPU device with a properly configured CUDA Toolkit. For more information visit the [CUDA-Zone](https://developer.nvidia.com/category/zone/cuda-zone). 
 
 ### Eigen
-The CPU version of this project uses the [Eigen library](http://eigen.tuxfamily.org/index.php?title=Main_Page) for lineare algebra tasks. This is already included here and configured in the Makefile, so there is no need to do anything for this.
+The CPU version of this project uses the [Eigen library](http://eigen.tuxfamily.org/index.php?title=Main_Page) for lineare algebra tasks. This is already included here and configured in the Makefile, so there is no need to do anything in this particular case.
 
 ### CULA Sparse S5
 The GPU version uses CULA Sparse S5 for the linear algebra. For this, you need to download CULA Sparse from [http://www.culatools.com/sparse/](http://www.culatools.com/sparse/), which is free for personal academic usage.  
