@@ -49,7 +49,7 @@ __est__ chooses estimator (0 = random columns estimator, 1 = global k-best estim
 
 #### 2. Random execution:
 ```bash
-    Main -r <dim> <k> <iter> [<lambda>]
+    Main -r <dim> <k> <iter> [<lambda>] [<est>]
 ```    
 
 In this mode, no image comparison is done. The matrix representation gets updated with random similiar/dissimilar results in each iteration for the estimated k-best image-pairs.  
