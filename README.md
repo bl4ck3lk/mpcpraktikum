@@ -22,19 +22,13 @@ To compile the program, some environment variables have to be set (respective to
 As well as some parameters for the compiler, which are already pre-configured in the Makefile. For more details see the [CULA Sparse reference](http://www.culatools.com/cula_sparse_programmers_guide/).
 
 ### OpenCV
-This implementation was developed and tested with OpenCV 2.4.5
+This implementation was developed and tested with [OpenCV 2.4.5](http://opencv.org/downloads.html) (compiled with support for CUDA).
 
-Add this line to your application's Gemfile:
+Environment variables to be set:
 
-    gem 'sauce_whisk'
+    #export PKG_CONFIG_PATH=/path/to/OpenCV-2.4.5/lib/pkgconfig
+    #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/OpenCV-2.4.5/lib
 
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install sauce_whisk
 
 ## Usage
     
