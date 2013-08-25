@@ -1,0 +1,108 @@
+GPU Device 0: "GeForce GTX 680" with compute capability 3.0
+
+Directory ../resource/small_london with 3398 files initialized.
+Executing GPU Version.
+Initializing Matrix.
+Comparing 680 images with OpenCV_GPU...
+Initialization of T done. 
+************** Iteration 0 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+[ESTIMATOR]: Device index arrays with size 680 allocated.
+time Solving: 3950
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 1 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 5600
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 2 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 6650
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 3 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7320
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 4 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7790
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 5 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7810
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 6 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 8020
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 7 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7980
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 8 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7900
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 9 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7970
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 10 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7820
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 11 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7880
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 12 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7880
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 13 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7820
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 14 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7750
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 15 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7820
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 16 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7860
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 17 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7720
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 18 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7960
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...
+************** Iteration 19 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7920
+After solving [680 of 680 NO ERROR]! Going to sort with thrust
+Comparing 680 images with OpenCV_GPU...

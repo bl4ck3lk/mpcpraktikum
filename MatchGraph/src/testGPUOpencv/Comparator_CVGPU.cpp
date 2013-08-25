@@ -30,13 +30,14 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
-void ratio_aux(int2 * trainIdx1, float2 * distance1, const size_t size1);
+int ratio_aux(int2 * trainIdx1, float2 * distance1, const size_t size1);
 
 struct IMG {
     cv::gpu::GpuMat im_gpu;
     cv::gpu::GpuMat keypoints, descriptors;
     std::vector<cv::KeyPoint> h_keypoints;
     std::vector<float> h_descriptors;
+    string path;
   };
 
 // should be modified to: get an array of images, upload them all
@@ -48,22 +49,81 @@ int ComparatorCVGPU::compareGPU(std::string* images1, std::string* images2, int 
 
 	SURF_GPU surf;
 	for (int i=0; i < k; i++) {
-		if (comparePairs.find(images1[i]) == comparePairs.end()) {
-			comparePairs.insert(std::make_pair(images1[i], uploadImage(images1[i], surf)));
+		IMG i1;
+		IMG i2;
+		std::map<std::string, IMG>::iterator it1 = comparePairs.find(images1[i]);		
+		if (it1 == comparePairs.end()) {
+			i1 = uploadImage(images1[i], surf);
+			comparePairs.insert(std::make_pair(images1[i], i1));
+
+			//comparePairs.insert(std::make_pair(images1[i], uploadImage(images1[i], surf)));
 			std::cout << "Picture inserted : " << images1[i] << std::endl;
 		}
+		else
+		{
+			i1 = (*it1).second;
+		}
+		std::map<std::string, IMG>::iterator it2 = comparePairs.find(images2[i]);
+		if (it2 == comparePairs.end()) {
+			i2 = uploadImage(images2[i], surf);
+			comparePairs.insert(std::make_pair(images2[i], i2));
 
-		if (comparePairs.find(images2[i]) == comparePairs.end()) {
-			comparePairs.insert(std::make_pair(images2[i], uploadImage(images2[i], surf)));
+			//comparePairs.insert(std::make_pair(images2[i], uploadImage(images2[i], surf)));
 			std::cout << "Picture inserted : " << images2[i] << std::endl;
+		}
+		else
+		{
+			i2 = (*it2).second;
 		}
 
 		std::vector<cv::DMatch> symMatches;
-		IMG& i1 = comparePairs.find(images1[i])->second;
-		IMG& i2 = comparePairs.find(images2[i])->second;
+		//IMG& i1 = comparePairs.find(images1[i])->second;
+		//IMG& i2 = comparePairs.find(images2[i])->second;
 		match2(i1.descriptors, i2.descriptors, symMatches);
 		std::cout << ".............." << std::endl;
+
+		if (showMatches)
+		{
+			surf.downloadKeypoints(i1.keypoints, i1.h_keypoints);
+			surf.downloadKeypoints(i2.keypoints, i2.h_keypoints);
+			// Convert keypoints into Point2f
+			std::vector<cv::Point2f> points1, points2;
+			cv::Mat im1 = imread( i1.path, 0 );
+			cv::Mat im2 = imread( i2.path, 0 );
+
+			// resize images
+			//CvSize size1 = cvSize(540, 540);
+			//CvSize size2 = cvSize(540, 540);
+			//resize(im1, im1, size1);
+			//resize(im2, im2, size2);
+
+			for (std::vector<cv::DMatch>::const_iterator it = symMatches.begin();
+					it != symMatches.end(); ++it) {
+
+				// Get the position of left keypoints
+				float x = i1.h_keypoints[it->queryIdx].pt.x;
+				float y = i1.h_keypoints[it->queryIdx].pt.y;
+				points1.push_back(cv::Point2f(x,y));
+				cv::circle(im1,cv::Point(x,y),3,cv::Scalar(255,0,0),2);
+				// Get the position of right keypoints
+				x = i2.h_keypoints[it->trainIdx].pt.x;
+				y = i2.h_keypoints[it->trainIdx].pt.y;
+				cv::circle(im2,cv::Point(x,y),3,cv::Scalar(255,0,0),2);
+				points2.push_back(cv::Point2f(x,y));
+			}
+
+			Mat img_matches;
+			//cv::drawMatches(im1, im1_keypoints, im2, im2_keypoints, matches, img_matches);
+			//cv::imshow("Matches", img_matches);
+
+			cv::imshow("Image 1", im1);
+			cv::imshow("Image 2", im2);
+
+			cv::waitKey();
+		}
 	}
+
+	
 	//surf.releaseMemory();
 	// destroy device allocated data?
 	// download result?
@@ -73,6 +133,7 @@ int ComparatorCVGPU::compareGPU(std::string* images1, std::string* images2, int 
 
 IMG ComparatorCVGPU::uploadImage(const std::string& inputImg, SURF_GPU& surf) {
 	struct IMG* img = new IMG();
+	img->path = inputImg;
 	cv::Mat imgfile = imread( inputImg, 0 );
 	img->im_gpu.upload(imgfile);
 	surf(img->im_gpu, cv::gpu::GpuMat(), img->keypoints, img->descriptors, false);
@@ -92,11 +153,13 @@ void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu,
 	std::cout << "Number of matched points 1->2 (raw): " << matches1.size() << std::endl;
 	std::cout << "Number of matched points 2->1 (raw): " << matches2.size() << std::endl;
 
-	/*
-	GpuMat trainIdxMat1, distanceMat1, allDist1;
+	
+	/*GpuMat trainIdxMat1, distanceMat1, allDist1;
 	GpuMat trainIdxMat2, distanceMat2, allDist2;
 
 	// use stream?
+
+	// test thrust
 	matcher.knnMatchSingle(im1_descriptors_gpu, im2_descriptors_gpu, 
 				trainIdxMat1, distanceMat1, allDist1, 2);
 	matcher.knnMatchSingle(im2_descriptors_gpu, im1_descriptors_gpu, 
@@ -110,17 +173,33 @@ void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu,
 	int2* trainIdx2 = trainIdxMat2.ptr<int2>();
 	float2* distance2 = distanceMat2.ptr<float2>();
 	
-	ratio_aux(trainIdx1, distance1, N1);
-	ratio_aux(trainIdx2, distance2, N2);
+	int r1 = ratio_aux(trainIdx1, distance1, N1);
+	int r2 = ratio_aux(trainIdx2, distance2, N2);
 
+	// this two must have only size r1/r2
 	std::vector<std::vector< cv::DMatch> > convertedMatches1;
 	std::vector<std::vector< cv::DMatch> > convertedMatches2;
 	
+	//
 	matcher.knnMatchDownload(trainIdxMat1, distanceMat1, convertedMatches1);
 	matcher.knnMatchDownload(trainIdxMat2, distanceMat2, convertedMatches2);
+	
+	int counter = 0;
+	for (std::vector< std::vector<cv::DMatch> >::iterator matchIterator1 = convertedMatches1.begin();
+			matchIterator1!= convertedMatches1.end() && counter < r1; ++matchIterator1, ++counter)
+	{
+		//std::cout << " matchIterator1 " << convertedMatches1.begin() << std::endl;
+		matchIterator1->clear();
+	}
+	counter = convertedMatches2.size();
+	for (std::vector< std::vector<cv::DMatch> >::iterator matchIterator2 = convertedMatches2.begin();
+			matchIterator2!= convertedMatches2.end() && counter < r2; ++matchIterator2, ++counter)
+	{
+		matchIterator2->clear();
+	}
 	std::cout << "convertedMatches1: " << convertedMatches1.size() << std::endl;
 	std::cout << "convertedMatches2: " << convertedMatches2.size() << std::endl;
-	*/
+	// end test thrust*/
 	
 	// 3. Remove matches for which NN ratio is > than threshold
 
@@ -133,7 +212,9 @@ void ComparatorCVGPU::match2(cv::gpu::GpuMat& im1_descriptors_gpu,
 
     // 4. Remove non-symmetrical matches
 	
+
 	symmetryTest(matches1,matches2,symMatches);
+	//std::cout << "Number of matched points (symmetry test - serial): " << symMatches.size() << std::endl;
 	//symmetryTest(convertedMatches1,convertedMatches2,symMatches);
 	std::cout << "Number of matched points (symmetry test): " << symMatches.size() << std::endl;
 }
@@ -317,7 +398,7 @@ int main( int argc, char** argv )
 	
 	ComparatorCVGPU comp;
 	int result = comp.compareGPU(images1, images2, k, true, false);
-	//int result = comp.compareGPU(argv[1], argv[2], true, false);
+	//int result = comp.compareGPU(argv[1], argv[2], false, false);
 	cout << "result = " << result << endl;
 }
 

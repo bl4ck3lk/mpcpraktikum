@@ -1,0 +1,64 @@
+GPU Device 0: "GeForce GTX 680" with compute capability 3.0
+
+Directory ../resource/medium_london with 8500 files initialized.
+Executing GPU Version.
+Initializing Matrix.
+Comparing 425 images with OpenCV_GPU...
+Initialization of T done. 
+************** Iteration 0 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+[ESTIMATOR]: Device index arrays with size 425 allocated.
+time Solving: 1350
+OpenCV Error: Assertion failed (layer_cols - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 133
+After solving [425 of 425 NO ERROR]! Going to sort with thrust
+Comparing 425 images with OpenCV_GPU...
+SURF OpenCV exception!
+../resource/medium_london/London+St+Pauls_3210990152_790db52565.jpg
+************** Iteration 1 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 1760
+After solving [425 of 425 NO ERROR]! Going to sort with thrust
+Comparing 425 images with OpenCV_GPU...
+************** Iteration 2 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 2590
+After solving [425 of 425 NO ERROR]! Going to sort with thrust
+Comparing 425 images with OpenCV_GPU...
+************** Iteration 3 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 2870
+After solving [425 of 425 NO ERROR]! Going to sort with thrust
+Comparing 425 images with OpenCV_GPU...
+************** Iteration 4 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 2830
+After solving [425 of 425 NO ERROR]! Going to sort with thrust
+Comparing 425 images with OpenCV_GPU...
+************** Iteration 5 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 2200
+After solving [425 of 425 NO ERROR]! Going to sort with thrust
+Comparing 425 images with OpenCV_GPU...
+************** Iteration 6 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 2440
+After solving [425 of 425 NO ERROR]! Going to sort with thrust
+Comparing 425 images with OpenCV_GPU...
+************** Iteration 7 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 4420
+After solving [425 of 425 NO ERROR]! Going to sort with thrust
+Comparing 425 images with OpenCV_GPU...
+************** Iteration 8 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 2970
+After solving [425 of 425 NO ERROR]! Going to sort with thrust
+Comparing 425 images with OpenCV_GPU...
+************** Iteration 9 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 3400
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+After solving [425 of 425 NO ERROR]! Going to sort with thrust
+Comparing 425 images with OpenCV_GPU...
+SURF OpenCV exception!
+../resource/medium_london/London+Houses+Of+Parliament_5743978183_dfb5baed86_z.jpg

@@ -14,16 +14,7 @@ struct is_bad_match
         // unpack the tuple
         const int2 trainIdx = thrust::get<0>(tuple);
         const float2 distance = thrust::get<1>(tuple);
-        // check if it is a bad match
-		/*
-		if ((distance.x / distance.y) < 0.85) {
-			trainIdx = NULL;
-			//trainIdx.x = NULL;
-			//trainIdx.y = NULL;
-			//printf("(%d, %d)\n", trainIdx1.x, trainIdx1.y);
-			//printf("distance.x = %f\n", distance1.x);
-			//printf("distance.y = %f\n", distance1.y);
-		}*/
+  
 		
         return (distance.x / distance.y) > 0.85f;
     }
@@ -63,23 +54,43 @@ void ratio(const int2 * trainIdx1, int2 * trainIdx2,
 }
 */
 
-void ratio_aux(int2 * trainIdx_ptr, float2 * distance_ptr, const size_t size)
+int ratio_aux(int2 * trainIdx_ptr, float2 * distance_ptr, const size_t size)
 {
 
 	thrust::device_ptr<int2> d_train_ptr(trainIdx_ptr);
 	thrust::device_ptr<float2> d_dist_ptr(distance_ptr);
 
-	//size_t new_size = 
-	//TODO: instead of remove_it, transform the stored value
-	
-	
-	thrust::remove_if(
-							thrust::make_zip_iterator(thrust::make_tuple(d_train_ptr, d_dist_ptr)),
+
+	/*
+	typedef thrust::device_vector< int2 >::iterator vitTrain;
+	typedef thrust::device_vector< float2 >::iterator vitDist;
+	typedef thrust::tuple< vitTrain, vitDist > TupleIt;
+	typedef thrust::zip_iterator< TupleIt > ZipIt;
+	*/
+	//ZipIt zend = 
+	size_t new_size = thrust::remove_if(
+					thrust::make_zip_iterator(thrust::make_tuple(d_train_ptr, d_dist_ptr)),
 	                  		thrust::make_zip_iterator(thrust::make_tuple(d_train_ptr + size, d_dist_ptr + size)),
 							is_bad_match())
-	     - thrust::make_zip_iterator(thrust::make_tuple(d_train_ptr, d_dist_ptr));
-	//std::cout << "new_size: " << new_size << std::endl;
+		- thrust::make_zip_iterator(thrust::make_tuple(d_train_ptr, d_dist_ptr));
+
+	//TupleIt Tend = zend.get_iterator_tuple();
+	//vitTrain trainEnd = thrust::get<0>(Tend);
+	//vitDist distEnd = thrust::get<1>(Tend);
 	
+	//for (vitTrain x = d_train_ptr; x != trainEnd; x++) {
+	//	printf("%i\n", x);
+	//}
+
+	     
+	//std::cout << "new_size: " << new_size << std::endl;
+	//for (size_t i = 0; i < new_size; i++) {
+	//	printf("%i\n", *d_train_ptr);
+		//std::cout << "i: " << **d_train_ptr << std::endl;
+	//}
+	
+	return (int) new_size;
+	//return 0;
   //const int thread = 32;
   //const dim3 blockSize( thread );
   //const dim3 gridSize( 8, 1 );

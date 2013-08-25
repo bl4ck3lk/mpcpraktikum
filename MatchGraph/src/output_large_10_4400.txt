@@ -1,0 +1,78 @@
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+GPU Device 0: "GeForce GTX 680" with compute capability 3.0
+
+Directory ../resource/large_london/ with 44427 files initialized.
+Executing GPU Version.
+Initializing Matrix.
+Comparing 4400 images with OpenCV_GPU...
+SURF OpenCV exception!
+../resource/large_london//London+Wembley+Stadium_7172800997_5f6f2835ff_k.jpg
+Initialization of T done. 
+************** Iteration 0 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+[ESTIMATOR]: Device index arrays with size 4400 allocated.
+time Solving: 4400
+After solving [1100 of 1100 NO ERROR]! Going to sort with thrust
+Comparing 4400 images with OpenCV_GPU...
+************** Iteration 1 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 2870
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+After solving [1100 of 1100 NO ERROR]! Going to sort with thrust
+Comparing 4400 images with OpenCV_GPU...
+SURF OpenCV exception!
+../resource/large_london//London+Guildhall_5017327303_92efeb6fc3_z.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+Senate+House_5107111947_914bb5cdce_z.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+Wembley+Stadium_7172800997_5f6f2835ff_k.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+Wembley+Stadium_7172800997_5f6f2835ff_k.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+British+Museum_5041236961_54d0c671a6_z.jpg
+************** Iteration 2 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 4160
+After solving [1100 of 1100 NO ERROR]! Going to sort with thrust
+Comparing 4400 images with OpenCV_GPU...
+************** Iteration 3 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 7960
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+After solving [1100 of 1100 NO ERROR]! Going to sort with thrust
+Comparing 4400 images with OpenCV_GPU...
+SURF OpenCV exception!
+../resource/large_london//London+Royal+College+of+Music_9128574639_b9112ed5c6_c.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+Royal+College+of+Music_9128574639_b9112ed5c6_c.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+Buckingham+Palace_5744201483_a1f81f6b8e_z.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+Buckingham+Palace_5744201483_a1f81f6b8e_z.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+Buckingham+Palace_5744201483_a1f81f6b8e_z.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+Buckingham+Palace_5744201483_a1f81f6b8e_z.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+Houses+Of+Parliament_5743978183_dfb5baed86_z.jpg
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+SURF OpenCV exception!
+../resource/large_london//London+Monument_5863200475_2f617418f8_z.jpg
+************** Iteration 4 **************
+[ESTIMATOR]: Determine kBest confidence measures on GPU (column-wise).
+time Solving: 4900
+OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /tmp/opencv-2.4.5/modules/nonfree/src/surf_gpu.cpp, line 132
+After solving [1100 of 1100 NO ERROR]! Going to sort with thrust
+Comparing 4400 images with OpenCV_GPU...
+SURF OpenCV exception!
+../resource/large_london//London+Senate+House_5107111947_914bb5cdce_z.jpg

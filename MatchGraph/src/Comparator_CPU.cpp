@@ -50,11 +50,8 @@ int Comparator_CPU::compare(const char* img1, const char* img2, bool showMatches
 	extractor.compute( im2, keypoints2, descriptors2 );
 
 
-	//cout << "descriptors1 = " << descriptors1.size().height << endl;
-	//cout << "descriptors2 = "<< descriptors2.size().height << endl << endl;
 
 	//-- Step 3: Matching descriptor vectors using FLANN matcher
-	//FlannBasedMatcher matcher;
 	BFMatcher matcher(NORM_L2, false);
 
 	std::vector<cv::DMatch> matches;
@@ -79,9 +76,7 @@ int Comparator_CPU::compare(const char* img1, const char* img2, bool showMatches
 
 	// 3. Remove matches for which NN ratio is > than threshold
 
-	// clean image 1 -> image 2 matches
 	int removed = ratioTest(matches1);
-	// clean image 2 -> image 1 matches
 	removed= ratioTest(matches2);
 
 	if (verbose) {
@@ -312,11 +307,3 @@ cv::Mat Comparator_CPU::ransacTest(const std::vector<cv::DMatch>& matches,
 
 	return fundamental;
 }
-/*
-int main( int argc, char** argv )
-{
-	Comparator comp;
-	int result = comp.compare("data/coliseum1.jpg", "data/coliseum2.jpg", false, false);
-	cout << "result = " << result << endl;
-}
-*/
