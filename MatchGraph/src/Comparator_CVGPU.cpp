@@ -31,7 +31,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 
 	cv::gpu::SURF_GPU surf;
 
-	//printf("Comparing with cv (map size %i)\n", comparePairs.size());
+	// printf("Comparing with cv (map size %i)\n", comparePairs.size());
 
 	for (int i=0; i < k && h_idx1[i] < iHandler->getTotalNr(); i++) {
 		IMG* i1;
@@ -40,15 +40,15 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		
 		if ((memLoad = getMemoryLoad()) > 0.8 && onGpuCounter > 0)
 		{
-			//			printf("Begin of iteration.  Load = %f\n", memLoad);
+			// printf("Begin of iteration.  Load = %f\n", memLoad);
 			cleanMap(memLoad > .9 ? 1.0 : .5);
 		}
 		
-		//check if host map is not getting too large -> memory problems
-		//todo maybe better strategy, but it works for now
+		// check if host map is not getting too large -> memory problems
+		// todo maybe better strategy, but it works for now
 		if(comparePairs.size() > 16000)
 		{ 
-		  int removeFromHost = 5000; //just remove 5000 images descriptors :(
+		  int removeFromHost = 5000; // just remove 5000 images descriptors :(
 		  for (std::map<int, IMG*>::iterator rmIter = comparePairs.begin();
 			   rmIter != comparePairs.end(); rmIter++)
 			   {
@@ -63,18 +63,17 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 				   if(removeFromHost == 0)
 					 break;
 				 }
-
 			   }
 		}
 		
 		
 		std::map<int, IMG*>::const_iterator it1 = comparePairs.find(h_idx1[i]);
 		if (it1 == comparePairs.end()) {
-//						std::cout << "Picture inserting : " << h_idx1[i] << std::endl;
+			// std::cout << "Picture inserting : " << h_idx1[i] << std::endl;
 
 			i1 = uploadImage(h_idx1[i], surf, iHandler);
 			if(i1 == NULL)
-			{ //uploading was not successful, e.g. bad file: do nothing, continue
+			{ // uploading was not successful, e.g. bad file: do nothing, continue
 				h_result[i] = 0;
 				continue;
 			}
@@ -85,7 +84,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		{
 			i1 = it1->second;
 			if(!i1->gpuFlag)
-			{ //not on gpu, have to (re-)upload
+			{ // not on gpu, have to (re-)upload
 				i1->descriptors.upload(i1->h_descriptors);
 				i1->gpuFlag = true;
 				onGpuCounter++;
@@ -93,11 +92,10 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		}
 		std::map<int, IMG*>::const_iterator it2 = comparePairs.find(h_idx2[i]);
 		if (it2 == comparePairs.end()) {
-//			std::cout << "Picture inserting : " << h_idx2[i] << std::endl;
-
+			// std::cout << "Picture inserting : " << h_idx2[i] << std::endl;
 			i2 = uploadImage(h_idx2[i], surf, iHandler);
 			if (i2 == NULL)
-			{ //uploading was not successful, e.g. bad file: do nothing, continue
+			{ // uploading was not successful, e.g. bad file: do nothing, continue
 				h_result[i] = 0;
 				continue;
 			}
@@ -119,10 +117,10 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 		try {
 			match2(i1->descriptors, i2->descriptors, symMatches);
 			float k = (2 * symMatches.size()) / float(i1->descriptors.size().height + i2->descriptors.size().height);
-			//		std::cout << "i1.descriptors.size() " << i1.descriptors.size().height << endl;
-			//			std::cout << "k(I_i, I_j) = " << k << std::endl;
+			// std::cout << "i1.descriptors.size() " << i1.descriptors.size().height << endl;
+			// std::cout << "k(I_i, I_j) = " << k << std::endl;
 
-			if (k < 0.025)
+			if (k < 0.025) // empirically set. TODO: find a better way of determining it.
 			{
 				h_result[i] = 0;
 			}
@@ -149,7 +147,7 @@ int ComparatorCVGPU::compareGPU(ImageHandler* iHandler, int* h_idx1,int* h_idx2,
 double ComparatorCVGPU::getMemoryLoad()
 {
 	const double free = (double) devInfo.freeMemory();
-	//	printf("Free memory %.3f MB (of total %.3f)\n", free/1024/1024, totalMem/1024/1024);
+	// printf("Free memory %.3f MB (of total %.3f)\n", free/1024/1024, totalMem/1024/1024);
 
 	return (totalMem-free)/totalMem;
 }
@@ -157,14 +155,9 @@ void ComparatorCVGPU::cleanMap(const float proportion)
 {
 	int toRelease = onGpuCounter/proportion;
 
-	//double free = (double) devInfo.freeMemory();
-	//double percUsed = (totalMem-free)/totalMem;
-	//	printf("CLEAN UP: Percentage of used memory %.2f -> releasing: %i\n", percUsed, toRelease);
-
 	for (std::map<int, IMG*>::const_iterator rmIter = comparePairs.begin();
 			rmIter != comparePairs.end(); rmIter++)
 	{
-
 		IMG* current = rmIter->second;
 		if (current->gpuFlag)
 		{
@@ -185,7 +178,8 @@ void ComparatorCVGPU::cleanMap(const float proportion)
 	}
 }
 
-//TODO: doesn"t work if keypoints are released
+// TODO: doesn"t work if keypoints are released. 
+// To use it, one must comment out the releasing of keypoints in the function "uploadImage"
 void ComparatorCVGPU::showPair(IMG& img1, IMG& img2, std::vector<cv::DMatch>& symMatches, cv::gpu::SURF_GPU& surf)
 {
 	surf.downloadKeypoints(img1.keypoints, img1.h_keypoints);
@@ -220,7 +214,7 @@ void ComparatorCVGPU::showPair(IMG& img1, IMG& img2, std::vector<cv::DMatch>& sy
 IMG* ComparatorCVGPU::uploadImage(const int inputImg, cv::gpu::SURF_GPU& surf, ImageHandler* iHandler) {
 	IMG* img = new IMG();
 	img->path = iHandler->getFullImagePath(inputImg);
-	//	std::cout << img->path <<std::endl;
+	// std::cout << img->path <<std::endl;
 	cv::Mat imgfile = cv::imread( img->path, 0 );
 	img->im_gpu.upload(imgfile);
 	cv::gpu::GpuMat mask;
@@ -229,8 +223,6 @@ IMG* ComparatorCVGPU::uploadImage(const int inputImg, cv::gpu::SURF_GPU& surf, I
 	{
 		surf(img->im_gpu, mask , img->keypoints, img->descriptors, false);
 	} catch (cv::Exception &Exception) {
-//		std::cout << "SURF OpenCV exception!" << std::endl;
-//		std::cout << img->path << std::endl;
 		img->im_gpu.release();
 		img->keypoints.release();
 		mask.release();
