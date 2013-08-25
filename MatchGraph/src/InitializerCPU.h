@@ -1,8 +1,10 @@
 /*
  * InitializerCPU.h
  *
+ * Header file for a CPU initializer, implementing the initializer interface.
+ *
  *  Created on: Jul 13, 2013
- *      Author: schwarzk
+ *      Author: Fabian
  */
 
 #ifndef INITIALIZERCPU_H_
@@ -15,7 +17,7 @@ public:
 	InitializerCPU();
 	~InitializerCPU();
 
-	/* for T Matrix initialization */
+	//Implemented abstract function (see Initializer.h)
 	void doInitializationPhase(MatrixHandler* T, ImageHandler* iHandler, ImageComparator* comparator, int initAraySize);
 };
 

@@ -1,5 +1,0 @@
-[CPUComparator]: Comparing image 184: /graphics/projects/data/photoDB_fromWWW/photoCollections/Flickr/R/rio/1295133877_46140a7e80.jpg with image 477: /graphics/projects/data/photoDB_fromWWW/photoCollections/Flickr/R/rio/2181869557_d322cc7683.jpg.
-OpenCV Error: Assertion failed (layer_rows - 2 * min_margin > 0) in SURF_GPU_Invoker, file /home/resch/Downloads/OpenCV-2.4.1/modules/gpu/src/surf.cpp, line 134
-terminate called after throwing an instance of 'cv::Exception'
-  what():  /home/resch/Downloads/OpenCV-2.4.1/modules/gpu/src/surf.cpp:134: error: (-215) layer_rows - 2 * min_margin > 0 in function SURF_GPU_Invoker
-

@@ -1,8 +1,13 @@
 /*
  * InitializerCPU.cpp
  *
+ * This class executes the initializing phase of the match graph algorithm.
+ * This is done by random image comparisons on host for the CPU-implementation.
+ * At this point, no duplicated entries or symmetric entries should be handed
+ * over to the image comparison.
+ *
  *  Created on: Jul 13, 2013
- *      Author: schwarzk
+ *      Author: Fabian
  */
 
 #include "InitializerCPU.h"
@@ -15,10 +20,16 @@
 #include "Tester.h"
 #include "CPUImpl.h"
 
+/*
+ * Constructor
+ */
 InitializerCPU::InitializerCPU()
 {
 }
 
+/*
+ * Destructor
+ */
 InitializerCPU::~InitializerCPU()
 {
 }
@@ -56,7 +67,7 @@ void InitializerCPU::doInitializationPhase(MatrixHandler* T, ImageHandler* iHand
 			initIndices.insert(rnd);
 			count++;
 		}
-	} while (count < initArraySize && count < dim*((dim-1)/2)); //maximal #elements in upper diagonal matrix
+	} while (count < initArraySize && count < dim*((dim-1)/2)); //maximal number of elements in upper diagonal matrix
 
 	//fill multimap to get it sorted by index 1
 	for (std::set<long>::iterator iter = initIndices.begin(); iter != initIndices.end(); ++iter)

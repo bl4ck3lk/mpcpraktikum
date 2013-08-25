@@ -1,12 +1,18 @@
 /*
  * CMEstimatorGPUSparseOPT.cu
  *
- * Generates a list of indices containing the i, j index of the overall
- * k-best confidence measure values in the lower diagonal matrix. (Slow)
- * The List of indices is generated column wise after Cula solved the
- * linear equation system. This class uses the already stored memory
- * of the equation solver and extracts the k best values of the specific
- * column.
+ * GPU implementation of finding the k-best image-pairs.
+ * This implementation stores the k-best confidence measure values of a
+ * certain amount of randomly chosen columns (depending on dimension and
+ * number of requested image pairs) in the index arrays, managed by this
+ * class.
+ * These indices are generated column-wise with CULA solving the linear
+ * equation system. For this, already stored memory from the matrix handler
+ * is used.
+ * The overall memory usage of this class is constant (4*k), depending on
+ * the number of requested image-pairs k.
+ * The resulting arrays contain only image-pairs that have not yet been
+ * compared and they do not contain symmetric entries.
  *
  *  Created on: 16.07.2013
  *      Author: Fabian, Armin
@@ -53,7 +59,9 @@ inline __int64_t continuousTimeNs()
 
 const int THREADS = 128;
 
-//Initialize index arrays
+/*
+ * Initialize index arrays with dim+1 and array for image-comparison result with 0.
+ */
 static __global__ void initIndexArrays(int* d_idx1, int* d_idx2, int* d_res, int size, unsigned int dim)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -66,7 +74,9 @@ static __global__ void initIndexArrays(int* d_idx1, int* d_idx2, int* d_res, int
 	}
 }
 
-//Initialize TMP index arrays
+/*
+ * Initialize buffer arrays.
+ */
 static __global__ void initTMPIndexArrays(long* d_tmpIndices, double* d_tmpConf, int size)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -79,7 +89,13 @@ static __global__ void initTMPIndexArrays(long* d_tmpIndices, double* d_tmpConf,
 }
 
 
-//Initialize indices
+/*
+ * Initialize index array such that indices = [-1,1,2,-1,...,dim-1], whereas the respective
+ * diagonal element is -1 as well as elements that are already compared or within the upper
+ * diagonal matrix.
+ * For already known elements (i.e. bColumnDevice[i] != 0), xColumnDevice[i] will be
+ * assigned a very low value to prevent them from getting chosen later.
+ */
 static __global__ void initKernel(long* gpuIndices, double* x, double* b, const int dim, const int columnIdx)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -100,7 +116,9 @@ static __global__ void initKernel(long* gpuIndices, double* x, double* b, const 
 	}
 }
 
-//Save the first kBest-Values in tmp Arrays
+/*
+ * Store the first k-best values in buffer arrays.
+ */
 static __global__ void saveTMPindicesKernel(long* gpuIndices, long* d_tmpInd, double* d_tmpConf, double* d_x, int dim, int kBest)
 {
 	int t_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -116,7 +134,9 @@ static __global__ void saveTMPindicesKernel(long* gpuIndices, long* d_tmpInd, do
 	}
 }
 
-//Save the continuous indices in the dedicated output arrays
+/*
+ * Store the continuous indices of the buffer array in the dedicated output arrays.
+ */
 static __global__ void mergeInOutIndiceArrays(long* d_tmpInd, int* d_idx1, int* d_idx2, int kBest, int dim)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -129,45 +149,66 @@ static __global__ void mergeInOutIndiceArrays(long* d_tmpInd, int* d_idx1, int* 
 	}
 }
 
+/*
+ * Constructor
+ */
 CMEstimatorGPUSparseOPT::CMEstimatorGPUSparseOPT() {
 	lastSize = 0;
 	d_idx1 = NULL;
 	d_idx2 = NULL;
 	d_res = NULL;
 	
-	totalTime = 0;
+	totalTime = 0; //runtime measurement
 
-	res = NULL; //todo remove me (testing)
-	idx1 = NULL; //todo remove me (testing)
+	//only for the debugging and testing functions (otherwise unused)
+	res = NULL;
+	idx1 = NULL;
+
 	printf("Using estimator: CMEstimatorGPUSparseOPT\n");
 }
 
-
+/*
+ * Destructor
+ */
 CMEstimatorGPUSparseOPT::~CMEstimatorGPUSparseOPT() {
 	//free device pointer
 	if (d_idx1 != NULL) cudaFree(d_idx1);
 	if (d_idx2 != NULL) cudaFree(d_idx2);
 	if (d_res != NULL) cudaFree(d_res);
 	if (res != NULL) free(res);
+
 	printf("Total solver time:%f\n", totalTime*(1/(double)1000000000));
 }
 
+/*
+ * Return pointer to device index array1 (i-th index).
+ */
 int* CMEstimatorGPUSparseOPT::getIdx1Ptr()
 {
 	return d_idx1;
 }
 
+/*
+ * Return pointer to device index array2 (j-th index).
+ */
 int* CMEstimatorGPUSparseOPT::getIdx2Ptr()
 {
 	return d_idx2;
 }
 
+/*
+ * Return pointer to device array for image-comparison result.
+ */
 int* CMEstimatorGPUSparseOPT::getResPtr()
 {
 	return d_res;
 }
 
-//todo remove me. only for testing purpose.
+/*
+ * Function for debugging and testing.
+ * Returns pointer to host array containing the device memory for the
+ * image-comparison results.
+ */
 int* CMEstimatorGPUSparseOPT::getResHostPtr(int dim)
 {
 	if (res != NULL) free(res);
@@ -177,7 +218,11 @@ int* CMEstimatorGPUSparseOPT::getResHostPtr(int dim)
 	return res;
 }
 
-//todo remove me. only for testing purpose.
+/*
+ * Function for debugging and testing.
+ * Returns pointer to host array containing the device memory for the
+ * index array1.
+ */
 int* CMEstimatorGPUSparseOPT::getIdx1HostPtr(int dim)
 {
 	if (idx1 != NULL) free(idx1);
@@ -187,14 +232,19 @@ int* CMEstimatorGPUSparseOPT::getIdx1HostPtr(int dim)
 	return idx1;
 }
 
-//todo remove me. only for testing purpose
+/*
+ * Function for debugging and testing.
+ * Function to set the device memory for the image-comparison result
+ * to a specific content.
+ */
 void CMEstimatorGPUSparseOPT::setResDevicePtr(int* res, int dim)
 {
 	cudaMemcpy(d_res, res, dim*sizeof(int), cudaMemcpyHostToDevice);
 }
 
-//Allocate device memory for index pointers and clear last used pointers
-//(for dynamic change of kBest values index-arays)
+/*
+ * Allocate resulting arrays.
+ */
 void CMEstimatorGPUSparseOPT::initIdxDevicePointers(int size, unsigned int dim)
 {
 	//clear previous pointers
@@ -215,8 +265,8 @@ void CMEstimatorGPUSparseOPT::initIdxDevicePointers(int size, unsigned int dim)
 }
 
 /*
- * Determines column-wise the best confidence measures of the specific column and saves it indices in two arrays.
- * Returns the number of actually written slots.
+ * Determines column-wise the best confidence measures of the specific column and saves k-best image pairs
+ * in a buffer.
  */
 void CMEstimatorGPUSparseOPT::determineBestConfMeasures(double* xColumnDevice, double* bColumnDevice, int columnIdx, long* d_tmpIndices, double* d_tmpConfidences, int dim, int kBest)
 {
@@ -227,16 +277,11 @@ void CMEstimatorGPUSparseOPT::determineBestConfMeasures(double* xColumnDevice, d
 	//wrap raw pointer with device pointer
 	thrust::device_ptr<long> dp_gpuIndices = thrust::device_pointer_cast(gpuIndices);
 
-	//Kernel settings for index array
+	//kernel settings for index array
 	int numBlocks = (dim + THREADS - 1) / THREADS;
 	int numThreads = THREADS;
 
-	/* Init indices array such that indices = [-1,1,2,-1,...,dim-1], whereas the respective
-	 * diagonal element is -1 as well as elements that are already compared or within the upper
-	 * diagonal matrix.
-	 * For already known elements (i.e. bColumnDevice[i] != 0), xColumnDevice[i] will be
-	 * assigned a very low value to prevent them from getting chosen later.
-	 */
+	//initializes index array and data to meet the requirements (see class description for details)
 	initKernel<<<numBlocks, numThreads>>>(gpuIndices, xColumnDevice, bColumnDevice, dim, columnIdx);
 #if CHECK_FOR_CUDA_ERROR
   CUDA_CHECK_ERROR() 
@@ -260,15 +305,22 @@ void CMEstimatorGPUSparseOPT::determineBestConfMeasures(double* xColumnDevice, d
 	cudaFree(gpuIndices);
 }
 
+/*
+ * Find the k-best image-pairs in the given confidence measure matrix (of some randomly chosen
+ * columns). These image-pairs are stored in the allocated index arrays on device.
+ * The confidence measure matrix argument F is not used (i.e. NULL) in the case of using
+ * the GPU implementation. The confidence measures are solved implicit with CULA while
+ * calling this function.
+ */
 void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, int kBest)
 {
-//	printf("[ESTIMATOR]: Determine kBest confidence measures on GPU (randomly picking columns).\n");
+	//printf("[ESTIMATOR]: Determine kBest confidence measures on GPU (randomly picking columns).\n");
 
 	//invoked only on sparse MatrixHandler
 	GPUSparse* T_sparse = dynamic_cast<GPUSparse*> (T);
 	unsigned int dim = T_sparse->getDimension();
 
-	//tmp device memoy to gather the overall maxima
+	//buffer device memory to gather the overall maxima
 	long* d_tmpIndices;
 	double* d_tmpConfidences;
 	cudaMalloc((void**) &d_tmpIndices, 2*kBest*sizeof(long));
@@ -279,7 +331,8 @@ void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, i
   CUDA_CHECK_ERROR() 
 #endif
 
-	/* if index array size changed since last use, allocate new device memory
+	/*
+	 * if index array size changed since last use, allocate new device memory
 	 * with new size and free old device memory. Otherwise reuse device memory.
 	 */
 	if (kBest != lastSize)
@@ -287,7 +340,6 @@ void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, i
 		initIdxDevicePointers(kBest, dim);
 		lastSize = kBest;
 	}
-	int countIndices = 0;
 
 	//set up data for solver
 	unsigned int nnz = T_sparse->getNNZ();
@@ -318,31 +370,39 @@ void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, i
 	culaSparseConfigInit(handle, &config); //initialize config values
 	config.relativeTolerance = 1e-6;
 	config.maxIterations = 500;
-//	config.maxRuntime = 1;
-//	config.useBestAnswer = 1;
+	//config.maxRuntime = 1;
+	//config.useBestAnswer = 1;
 	culaSparseSetCgSolver(handle, plan, 0); //associate CG solver with the plan
 	culaSparseSetJacobiPreconditioner(handle, plan, 0); //associate jacobi preconditioner with the plan
 
-	//Calcuate n of columns and elements per column	
+	//calculate number of randomly chosen columns and number of elements chosen per column
 	double ddim = double(dim);
 	double f = (double(kBest)/ddim) < 0.5 ? 0.5 : (double(kBest)/ddim);
 	
-//	printf("Dim: %i \t kBest: %i\n",dim,kBest);
+	//printf("Dim: %i \t kBest: %i\n",dim,kBest);
 	double perCol =  double(kBest)/(ddim*pow(ddim, 0.55))*(exp(-(1/(f*ddim))*ddim)*ddim);
 	int xBestForThisColumn = ceil(perCol);
 	if (!xBestForThisColumn) xBestForThisColumn = 1; //at least 1 per column
 	int nrCols = (kBest/xBestForThisColumn) + 2; //round-off error
-//	printf("Per column:%i    Nr Cols: %i\n",xBestForThisColumn, nrCols);
+	//printf("Per column:%i    Nr Cols: %i\n",xBestForThisColumn, nrCols);
+
+	//buffer for already searched columns
 	char* colsVisited = (char*)malloc(sizeof(char)*dim);
 	memset(colsVisited, 0, dim);
 
+	//first random column
 	int column = rand() % dim;
+
+	//counter for the number of image-pairs that have been chosen
+	int countIndices = 0;
+
+	//number of image-pairs that should have been chosen by now
 	int determinedIndicesByNow = 0;
 
-	int noError = 0;
-	int solverTrials = 0;
-	//printf("[CMESTIMATOR]: Solve Eq. system column by column.\n");
-	__int64_t startCula = continuousTimeNs();
+	int noError = 0; //counter for solved columns with CULA error
+	int solverTrials = 0; //number of solved columns.
+
+	__int64_t startCula = continuousTimeNs(); //start CULA measurement
 	for(int i = 0; i < nrCols && countIndices < kBest; i++) //if enough values are gathered, stop computation
 	{
 		//1. Compute confidence measure for this column (solve Ax=b)
@@ -354,10 +414,9 @@ void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, i
 		if(res == culaSparseUnspecifiedError || res == culaSparseRuntimeError || res == culaSparseInteralError)
 		{
 			//A bad CULA error occurred
-
 			if(res == culaSparseRuntimeError)
 			{
-				printf("CULA Runtime Error\n");
+				printf("CULA runtime error\n");
 			}
 
 			printf("Exiting due to CULA ERROR!\n");
@@ -382,8 +441,9 @@ void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, i
 #endif
 		}
 
-		determinedIndicesByNow += xBestForThisColumn; // #indices that should have been determined
+		determinedIndicesByNow += xBestForThisColumn; //number of indices that should have been determined
 
+		//choose another random column that has not yet been chosen
 		column = rand() % dim;
 		const int startCol = column;
 		while(colsVisited[column] == 1)
@@ -393,13 +453,13 @@ void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, i
 				break;
 		}
 
-//		printf("Column %i, try to determine %i best values. Actually determined by now %i values\n", i, determineXforThisColumn, countIndices);
+		//printf("Column %i, try to determine %i best values. Actually determined by now %i values\n", i, determineXforThisColumn, countIndices);
 	}
-	__int64_t solverDiff = continuousTimeNs()-startCula;
-	totalTime += solverDiff;
-//	printf("Solver time [%i of %i NO ERROR]: %f\n", noError, solverTrials, solverDiff*(1/(double)1000000000));
+	__int64_t solverDiff = continuousTimeNs()-startCula; //stop CULA measurement
+	totalTime += solverDiff; //CULA runtime
 	printf("%f\t%i\t", solverDiff*(1/(double)1000000000), (solverTrials-noError));
 
+	//store results from buffer in the actual resulting arrays
 	numBlocks = (kBest + THREADS - 1) / THREADS;
 	mergeInOutIndiceArrays<<<numBlocks, THREADS>>>(d_tmpIndices, d_idx1, d_idx2, kBest, dim);
 
@@ -413,12 +473,6 @@ void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, i
   CUDA_CHECK_ERROR() 
 #endif
 
-// 	if (false) //debug printing
-// 	{
-// 		Helper::printGpuArray(d_idx1, kBest, "Idx1");
-// 		Helper::printGpuArray(d_idx2, kBest, "Idx2");
-// 	}
-
 	//clean up the mess.
 	free(colsVisited);
 	cudaFree(d_x);
@@ -429,7 +483,10 @@ void CMEstimatorGPUSparseOPT::getKBestConfMeasures(MatrixHandler* T, float* F, i
 	culaSparseDestroy(handle);
 }
 
-//handles only device pointer.
+/*
+ * Solve the linear equation system of a specific column with CULA.
+ * Due to the prior set-up, only device pointers can be used here.
+ */
 culaSparseStatus CMEstimatorGPUSparseOPT::computeConfidenceMeasure(culaSparseHandle handle, culaSparsePlan plan, culaSparseConfig config,
 															unsigned int dim, unsigned int nnz, double* A, int* rowPtr, int* colIdx, double* x, double* b)
 {
@@ -468,6 +525,10 @@ culaSparseStatus CMEstimatorGPUSparseOPT::computeConfidenceMeasure(culaSparseHan
 	return status;
 }
 
+/*
+ * Fill index array1 and index array2 with random image pairs for random
+ * iteration.
+ */
 void CMEstimatorGPUSparseOPT::computeRandomComparisons(MatrixHandler* T, const int k)
 {
 	printf("0\t0\t");
