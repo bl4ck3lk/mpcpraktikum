@@ -26,8 +26,8 @@ This implementation was developed and tested with [OpenCV 2.4.5](http://opencv.o
 
 Environment variables to be set:
 
-    #export PKG_CONFIG_PATH=/path/to/OpenCV-2.4.5/lib/pkgconfig
-    #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/OpenCV-2.4.5/lib
+    export PKG_CONFIG_PATH=/path/to/OpenCV-2.4.5/lib/pkgconfig
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/OpenCV-2.4.5/lib
 
 
 ## Usage
