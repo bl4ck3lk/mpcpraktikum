@@ -51,12 +51,15 @@ int main(int argc, char** argv)
 			"       Starts algorithm for <iter> iterations on images in directory <path> with specified file\n"
 			"       extension <ext>. Parameter <k> [1,#numImages] defines how many images shall be compared each\n"
 			"       iteration (k-best). Model parameter lambda [0,1] (default = 1) influences the computation of\n"
-			"       confidence measures (see algorithm details)."
+			"       confidence measures (see algorithm details). <logDir> set path for the logfile (default =\n"
+			"	'log/matchGraph.log'. Each <randStep>-th iteration, the algorithm uses random image-pairs\n"
+			"	to be compaired. <est> chooses estimator (0 = random columns estimator, 1 = global k-best\n"
+			"	estimator, default = 0)."
 			"\nOR\n"
-			"       -r <dim> <k> <iter> [<lambda>]\tRandom mode which does comparison not on real image data\n"
+			"       -r <dim> <k> <iter> [<lambda>] [<est>]\tRandom mode which does comparison not on real image data\n"
 			"       but just in a random fashion for dimension <dim> and <iter> iterations and given\n"
-			"       parameter <k> [1,dim] and model parameter lambda [0,1] (default = 1). No image comparison\n"
-			"		is done is this mode.\n");
+			"       parameter <k> [1,dim] and model parameter lambda [0,1] (default = 1). <est> chooses estimagor\n"
+			"	(see above). No image comparison is done is this mode.\n");
 
 	if (argc < 4)
 	{
@@ -98,7 +101,7 @@ int main(int argc, char** argv)
 		_k = atoi(argv[acount++]);
 		if (_k > _dim || _k < 1)
 		{
-			printf("ERROR: <k> must be >=1 and <= dimension\n");
+			printf("ERROR: <k> must be >= 1 and <= dimension\n");
 		}
 
 		_iter = atoi(argv[acount++]);
@@ -109,6 +112,11 @@ int main(int argc, char** argv)
 		if (argc > 5)
 		{
 			_lambda = atof(argv[acount++]);
+		}
+
+		if (argc > 6)
+		{
+			_est = atoi(argv[acount++]);
 		}
 	}
 	else
@@ -204,7 +212,7 @@ int main(int argc, char** argv)
 	T = new GPUSparse(dim, lambda);
 	GPUSparse* T_sparse = dynamic_cast<GPUSparse*>(T);
 	init = new InitializerGPU();
-	if(_est == 0)
+	if (_est == 0)
 		CME = new CMEstimatorGPUSparseOPT();
 	else
 		CME = new CMEstimatorGPUSparseMax();
